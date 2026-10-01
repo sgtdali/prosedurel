@@ -245,7 +245,9 @@ func _refresh() -> void:
 		"sales":
 			lines.append(selected["name"])
 			var prices: Array[String] = []
-			for good in Hauling.SALE_PRICES:
+			var demand := get_node_or_null("../../Demand")
+			var goods: Array = demand.required_goods(selected["town"]) if demand != null and selected.has("town") else Hauling.SALE_PRICES.keys()
+			for good in goods:
 				prices.append("%s %s" % [Goods.name_of(good), Wallet.format(Hauling.SALE_PRICES[good])])
 			lines.append("Alır: " + ", ".join(prices))
 			lines.append("Satılan: %d" % selected.get("sold", 0))

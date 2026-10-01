@@ -23,6 +23,12 @@ func spend(amount: int) -> bool:
 	return true
 
 
+## Recurring costs can create a negative balance; sales repay it automatically.
+func charge(amount: int) -> void:
+	money -= maxi(amount, 0)
+	changed.emit(money, -maxi(amount, 0))
+
+
 func earn(amount: int) -> void:
 	money += amount
 	changed.emit(money, amount)

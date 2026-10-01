@@ -1,4 +1,8 @@
-# Kasaba talebi (tasarım, 2026-09-30)
+# Kasaba talebi (önceki tasarım, 2026-09-30)
+
+> Bu dosya ilk çelik talebi uygulamasının tarihsel kaydıdır. 2026-10-01 tarihli güncel kurallar
+> [ilerleme_motivasyon.md](ilerleme_motivasyon.md) içindedir: üç tam ayda büyüme, küçülme,
+> ürün başına talep ve kalıcı toplam nüfus açılımı önceki kuralların yerini almıştır.
 
 Oyun denemesi: ilk zincir kurulunca oyuncu bekliyor, ne yapacağını bilmiyor ("bitti sanki oyun"). Hedef,
 baskı ve sonrası yok. Çözüm: kasabaların aylık çelik talebi; talebi karşılanan kasaba büyür.

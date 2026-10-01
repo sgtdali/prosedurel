@@ -28,6 +28,10 @@ const TYPES := {
 		{"at": Vector2i(0, 0), "side": Vector2i(-1, 0), "good": "pig_iron", "io": "in"},
 		{"at": Vector2i(0, 1), "side": Vector2i(-1, 0), "good": "coal", "io": "in"},
 		{"at": Vector2i(1, 1), "side": Vector2i(1, 0), "good": "steel", "io": "out"}]},
+	"parts_assembler": {"size": 3, "seconds": 4.0, "ports": [
+		{"at": Vector2i(0, 0), "side": Vector2i(-1, 0), "good": "steel", "io": "in"},
+		{"at": Vector2i(0, 2), "side": Vector2i(-1, 0), "good": "copper", "io": "in"},
+		{"at": Vector2i(2, 1), "side": Vector2i(1, 0), "good": "machine_parts", "io": "out"}]},
 }
 
 ## Units of each input a machine holds, and of output before it stops

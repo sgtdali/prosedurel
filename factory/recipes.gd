@@ -10,6 +10,8 @@ const CATALOG := {
 		"inputs": {"iron": 2, "coal": 1}, "outputs": {"pig_iron": 1}},
 	"converter": {"name": "Konvertör", "cost": 4000,
 		"inputs": {"pig_iron": 1, "coal": 1}, "outputs": {"steel": 1}},
+	"parts_assembler": {"name": "Parça montaj makinesi", "cost": 4500,
+		"inputs": {"steel": 1, "copper": 1}, "outputs": {"machine_parts": 1}},
 }
 
 const STATUS_TEXTS := {"working": "Çalışıyor", "starved": "Girdi bekliyor", "blocked": "Çıkış dolu"}

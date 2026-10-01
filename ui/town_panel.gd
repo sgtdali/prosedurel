@@ -41,6 +41,8 @@ var _title: Label
 var _houses: Label
 var _month: Control
 var _history: Control
+var _status: Label
+var _next: Label
 var _feeders: VBoxContainer
 var _place_button: Button
 var _refresh_timer := 0.0
@@ -98,6 +100,21 @@ func _build() -> void:
 	# This month
 	_month = _drawn(Vector2(WIDTH - 28.0, 40), _draw_month)
 	column.add_child(_month)
+	_status = _label("", 14, TEXT)
+	column.add_child(_status)
+	_next = _label("", 13, MUTED)
+	_next.custom_minimum_size.x = WIDTH - 28
+	_next.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var next_row := HBoxContainer.new()
+	column.add_child(next_row)
+	next_row.add_child(_drawn(Vector2(30, 42), func(c: Control) -> void:
+		var locked: bool = town.is_empty() or _demand == null or not _demand.required_goods(town).has("machine_parts")
+		MapIcons.draw_chip(c, "machine_parts", Vector2(14, 20), 24, locked)
+		if locked:
+			c.draw_arc(Vector2(23, 25), 4, PI, TAU, 12, RIM, 2)
+			c.draw_rect(Rect2(18, 25, 10, 8), RIM)))
+	_next.custom_minimum_size.x = WIDTH - 66
+	next_row.add_child(_next)
 	# The last months
 	_history = _drawn(Vector2(WIDTH - 28.0, 52), _draw_history)
 	column.add_child(_history)
@@ -165,6 +182,22 @@ func _refresh() -> void:
 		return
 	_title.text = town.get("name", "Kasaba")
 	_houses.text = "%d / %d ev" % [town["houses"].size(), _max_houses()]
+	if _demand != null:
+		var goods: Array = _demand.required_goods(town)
+		_month.custom_minimum_size.y = goods.size() * 44.0
+		var ratio: float = _demand.satisfaction(town)
+		_status.text = "Tam ay serisi: %d/3 · Asgari: %d ev" % [mini(town.get("growth_streak", 0), 3), town.get("minimum_houses", 0)]
+		if ratio <= 0.30:
+			_status.text += "\nAy sonu: " + ("−1 ev" if town["houses"].size() > town.get("minimum_houses", 0) else "asgari nüfus korunur")
+		elif ratio < 1.0:
+			_status.text += "\nAy sonu: nüfus sabit; seri sıfırlanır"
+		elif town.get("growth_streak", 0) >= 3 and town["houses"].size() < _max_houses():
+			_status.text += "\nYeni evler için yol ve boş arsa gerekli"
+		elif town["houses"].size() >= _max_houses():
+			_status.text += "\nAzami nüfusa ulaşıldı"
+		else:
+			_status.text += "\nAy sonu: " + ("+3 ev" if town.get("growth_streak", 0) >= 2 else "büyüme serisi ilerler")
+		_next.text = "Sonraki ihtiyaç: makine parçası\n%d evde · üretim %d toplam evde açılır" % [_demand.PARTS_TOWN_SIZE, _demand.PARTS_UNLOCK] if not goods.has("machine_parts") else "Çelik + bakır → makine parçası\nBüyümek için iki ürün de tam karşılanmalı"
 	var routes := feeding_routes()
 	if routes != _shown_routes:
 		_shown_routes = routes
@@ -200,33 +233,24 @@ func _max_houses() -> int:
 	return _demand.MAX_HOUSES if _demand != null else 60
 
 
-## The steel chip, a bar of this month's steel against the demand line, and the month's clock.
+## Each required product has its own counter and satisfaction bar.
 func _draw_month(c: Control) -> void:
 	if town.is_empty() or _demand == null:
 		return
-	var wanted: int = _demand.demand_of(town)
-	var came: int = _demand.delivered_of(town)
-	MapIcons.draw_chip(c, "steel", Vector2(16, 20), 28.0)
-	var bar := Rect2(38, 11, c.size.x - 38 - 44, 18)
-	var scale := float(maxi(int(wanted * 1.4), came)) if wanted > 0 else 1.0
-	c.draw_rect(bar.grow(2.0), RIM)
-	c.draw_rect(bar, Color("#e6dcc4"))
-	var met_width := bar.size.x * minf(came, wanted) / scale
-	c.draw_rect(Rect2(bar.position, Vector2(met_width, bar.size.y)), MET if came >= wanted and wanted > 0 else CARD.darkened(0.25))
-	if came > wanted:
-		c.draw_rect(Rect2(bar.position + Vector2(met_width, 0), Vector2(bar.size.x * (came - wanted) / scale, bar.size.y)), OVER)
-	var line_x := bar.position.x + bar.size.x * wanted / scale
-	c.draw_line(Vector2(line_x, bar.position.y - 5), Vector2(line_x, bar.end.y + 5), TEXT, 3.0)
-	# How much of the month is gone
-	var clock_at := Vector2(c.size.x - 18, 20)
-	var gone := float((_clock.day - 1) if _clock != null else 0) / GameClock.DAYS_PER_MONTH
-	c.draw_circle(clock_at, 14, RIM)
-	c.draw_circle(clock_at, 12, CARD)
-	if gone > 0.0:
-		var wedge := PackedVector2Array([clock_at])
-		for i in 25:
-			wedge.append(clock_at + Vector2.UP.rotated(TAU * gone * i / 24.0) * 11.0)
-		c.draw_colored_polygon(wedge, Color(RIM, 0.55))
+	var row := 0
+	for good in _demand.required_goods(town):
+		var wanted: int = _demand.demand_of(town, good)
+		var came: int = _demand.delivered_of(town, good)
+		var y := row * 44.0
+		MapIcons.draw_chip(c, good, Vector2(16, y + 20), 28.0)
+		var bar := Rect2(38, y + 27, c.size.x - 42, 9)
+		c.draw_rect(bar.grow(1), RIM)
+		c.draw_rect(bar, Color("#e6dcc4"))
+		var ratio := float(came) / maxi(wanted, 1)
+		c.draw_rect(Rect2(bar.position, Vector2(bar.size.x * minf(ratio, 1.0), bar.size.y)), MET if ratio >= 1.0 else (Color("#cd795b") if ratio <= 0.30 else Color("#d4b363")))
+		c.draw_string(ThemeDB.fallback_font, Vector2(38, y + 18), "%s  %d/%d · %d%%" % [MapIcons.Goods.name_of(good), came, wanted, int(ratio * 100)], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, TEXT)
+		row += 1
+
 
 
 ## The last months as columns: what came (green when met), the demand as a tick, a house over the
@@ -239,9 +263,6 @@ func _draw_history(c: Control) -> void:
 	var width := (c.size.x - 4.0) / slots
 	var top := 12.0
 	var bottom := c.size.y - 2.0
-	var most := 1
-	for month in history:
-		most = maxi(most, maxi(month["delivered"], month["demand"]))
 	for k in slots:
 		var x := 2.0 + k * width
 		var slot := Rect2(x + 2.0, top, width - 4.0, bottom - top)
@@ -250,10 +271,10 @@ func _draw_history(c: Control) -> void:
 		if index < 0:
 			continue
 		var month: Dictionary = history[index]
-		var met: bool = month["delivered"] >= month["demand"] and month["demand"] > 0
-		var height: float = slot.size.y * month["delivered"] / float(most)
-		c.draw_rect(Rect2(slot.position.x, slot.end.y - height, slot.size.x, height), MET if met else CARD.darkened(0.3))
-		var tick: float = slot.end.y - slot.size.y * month["demand"] / float(most)
+		var met: bool = month.get("ratio", 0.0) >= 1.0
+		var height: float = slot.size.y * minf(month.get("ratio", 0.0), 1.4) / 1.4
+		c.draw_rect(Rect2(slot.position.x, slot.end.y - height, slot.size.x, height), MET if met else (Color("#cd795b") if month.get("shrank", false) else CARD.darkened(0.3)))
+		var tick: float = slot.end.y - slot.size.y / 1.4
 		c.draw_line(Vector2(slot.position.x - 1, tick), Vector2(slot.end.x + 1, tick), TEXT, 2.0)
 		if month["grew"]:
 			MapIcons.draw_house_mark(c, Vector2(slot.get_center().x, 6.0), 9.0, MET, RIM)

@@ -25,6 +25,10 @@ const WorldChunk = preload("res://map/world_chunk.gd")
 ## Clicks closer than this to the previous point are ignored (e.g. the first half of a
 ## double click).
 const MIN_POINT_GAP := 12.0
+const COST_PER_UNIT := 1.0
+var _history_costs: Array[int] = []
+var preview_cost := 0
+var _wallet: Node
 const BLOCKED_TINT := Color(1.0, 0.3, 0.25, 0.9)
 ## A road may not start this close to an obstacle (about a road's half width plus its verge).
 const OBSTACLE_MARGIN := 9.0
@@ -83,6 +87,7 @@ var _hidden_tails := {}
 
 
 func _ready() -> void:
+	_wallet = get_node_or_null("../Wallet")
 	_add_obstacles()
 	network.water = RoadNetwork.build_water(WorldChunk.river_lines(map_seed, LargeWorldMap.WORLD_SIZE.y))
 	_network_visual = RoadVisual.new()
@@ -336,10 +341,21 @@ func _final_path(points: PackedVector2Array, corners: PackedByteArray) -> Packed
 
 
 ## road_rules.gd's verdict on the road these points would build: {problem, at, path}.
+static func price_of(path: PackedVector2Array) -> int:
+	var length := 0.0
+	for i in range(1, path.size()):
+		length += path[i - 1].distance_to(path[i])
+	return ceili(length * COST_PER_UNIT)
+
+
 func _check(points: PackedVector2Array, corners: PackedByteArray) -> Dictionary:
 	var path := _final_path(points, corners)
 	var verdict := RoadRules.check(network, path, _kind)
 	verdict["path"] = path
+	verdict["cost"] = price_of(path)
+	if verdict["problem"] == "" and _wallet != null and not _wallet.can_afford(verdict["cost"]):
+		verdict["problem"] = "Yetersiz para: %d gerekli" % verdict["cost"]
+		verdict["at"] = path[path.size() - 1]
 	return verdict
 
 
@@ -356,6 +372,7 @@ func _start_problem(point: Vector2) -> String:
 ## Shows the road as it would be built with the cursor as its next point (red if it breaks a
 ## rule), the snap ring under the cursor and a cross where the rule is broken.
 func _update_preview() -> void:
+	preview_cost = 0
 	var problem := ""
 	var problem_at := Vector2.INF
 	_snap_point = Vector2.INF
@@ -377,6 +394,7 @@ func _update_preview() -> void:
 				corners = next["corners"]
 			if points.size() >= 2:
 				var verdict := _check(points, corners)
+				preview_cost = verdict["cost"]
 				problem = verdict["problem"]
 				problem_at = verdict["at"]
 				var preview: Array[PackedVector2Array] = [_joined_to_dead_ends(verdict["path"])]
@@ -468,8 +486,11 @@ func _finish_stroke() -> void:
 		_marker.queue_redraw()
 		_update_hint()
 		return
+	if _wallet != null and not _wallet.spend(verdict["cost"]):
+		return
 	_cancel_stroke()
 	_history.append(network.snapshot())
+	_history_costs.append(verdict["cost"] if _wallet != null else 0)
 	network.add_road(verdict["path"], _snap_distance(), _kind, true)
 	refresh()
 
@@ -477,6 +498,7 @@ func _finish_stroke() -> void:
 ## Commits a checked depot access road with the same undo behavior as a drawn road.
 func build_access_road(path: PackedVector2Array) -> void:
 	_history.append(network.snapshot())
+	_history_costs.append(0)
 	network.add_road(path, RoadNetwork.SNAP_DISTANCE, RoadNetwork.ROAD, true)
 	refresh()
 
@@ -499,6 +521,7 @@ func _erase_at(at: Vector2) -> void:
 	var before := network.snapshot()
 	if network.remove_near(at, ERASE_DISTANCE):
 		_history.append(before)
+		_history_costs.append(0)
 		refresh()
 
 
@@ -506,6 +529,9 @@ func _undo() -> void:
 	if _history.is_empty():
 		return
 	network.restore(_history.pop_back())
+	var refund: int = _history_costs.pop_back() if not _history_costs.is_empty() else 0
+	if _wallet != null and refund > 0:
+		_wallet.earn(refund)
 	refresh()
 
 
@@ -528,4 +554,4 @@ func _update_hint() -> void:
 ## `problem` is the rule broken, in Turkish as road_rules.gd gives it ("" when none).
 func help_state() -> Dictionary:
 	return {"drawing": _drawing, "erasing": _erasing, "ortho": _ortho, "street": _kind == RoadNetwork.STREET,
-		"problem": _problem}
+		"problem": _problem, "cost": preview_cost}

@@ -61,6 +61,8 @@
 [ext_resource type="Script" path="res://economy/town_demand.gd" id="town_demand_script"]
 [ext_resource type="Script" path="res://ui/town_panel.gd" id="town_panel_script"]
 
+[ext_resource type="Script" path="res://ui/progression_panel.gd" id="progression_panel_script"]
+
 [node name="PngMap" type="Node2D" unique_id=766230843]
 
 [node name="Terrain" type="Node2D" parent="." unique_id=492673418]
@@ -509,6 +511,11 @@ script = ExtResource("factory_view_script")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1093841680]
 layer = 2
+
+[node name="ProgressionPanel" type="Control" parent="HUD"]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("progression_panel_script")
 
 [node name="MoneyPanel" type="Control" parent="HUD" unique_id=748765661]
 layout_mode = 3

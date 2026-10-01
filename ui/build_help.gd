@@ -178,9 +178,13 @@ func _refresh() -> void:
 	_set_row("undo", "Undo", true, false)
 	_set_row("esc", "Cancel road" if drawing else "Exit road mode", true, false)
 	var problem: String = state["problem"]
-	_problem.visible = problem != ""
+	_problem.visible = problem != "" or state.get("cost", 0) > 0
+	_problem_text.add_theme_color_override("font_color", BLOCKED if problem != "" else TEXT)
+	(_problem.get_theme_stylebox("panel") as StyleBoxFlat).border_color = BLOCKED if problem != "" else RIM
 	if problem != "":
 		_problem_text.text = "Can't build: " + REASONS.get(problem, _english_full_junction(problem))
+	else:
+		_problem_text.text = "Yol bedeli: %d" % state.get("cost", 0)
 	_place()
 
 

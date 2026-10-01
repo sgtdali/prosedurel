@@ -132,8 +132,7 @@ func badge_of(town: Dictionary) -> Dictionary:
 		for record in _placer.sales_records():
 			if is_same(record.get("town"), town):
 				served = true
-	var wanted: int = _demand.demand_of(town) if _demand != null else 0
-	var fill: float = float(_demand.delivered_of(town)) / wanted if wanted > 0 else 0.0
+	var fill: float = _demand.satisfaction(town) if _demand != null else 0.0
 	var age := -1.0
 	if _grew.has(town["center"]):
 		age = (Time.get_ticks_msec() - _grew[town["center"]]) / 1000.0 / GROW_SHOW
@@ -152,7 +151,7 @@ func _draw() -> void:
 		for town in _cities.towns:
 			var b := badge_of(town)
 			var at: Vector2 = town["center"] + Vector2(0.0, -24.0)
-			MapIcons.draw_town_badge(self, "steel", at, badge, b["fill"], town["houses"].size(), b["served"], b["full"], b["glow"])
+			MapIcons.draw_town_badge(self, _demand.weakest_good(town), at, badge, b["fill"], town["houses"].size(), b["served"], b["full"], b["glow"])
 			if b["age"] >= 0.0:
 				MapIcons.draw_grew_mark(self, at, badge, b["age"])
 	var size := maxf(BALLOON, MIN_PIXELS / maxf(zoom, 0.01))

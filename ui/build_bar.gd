@@ -505,7 +505,7 @@ func _building_details(kind: String) -> Dictionary:
 			details = {"title": "Fabrika", "description": "İçinde bantlarla üretim hattı kurulur. Kamyonlar hammadde getirir, ürünü alır.",
 				"output": "3 giriş · 2 çıkış", "script": FactoryVisual}
 		"sales_depot":
-			details = {"title": "Satış Deposu", "description": "Bir kasaba alanının içine kurulur; getirilen ürünleri o kasabaya satar (çelik %s)." % Wallet.format(Hauling.SALE_PRICES["steel"]),
+			details = {"title": "Satış Deposu", "description": "Kasabanın istediği malları satar. Talebe kadar tam fiyat, fazlasına %25 ödenir. Kasaba büyüdükçe yeni ürün ister.",
 				"output": "Satış", "script": SalesDepotVisual}
 		_:
 			details = {"title": "Lojistik Depo", "description": "Kamyon garajı: kamyonlar buradan alınır, Rotalar panelinden (R) rotalara verilir.", "output": "%d kamyona kadar" % Hauling.MAX_TRUCKS, "script": DepotVisual}

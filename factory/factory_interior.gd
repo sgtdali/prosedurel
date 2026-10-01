@@ -61,6 +61,7 @@ const ACCENT := Color("#d9733f")
 var state: FactoryState
 ## Where money comes from; the sandbox makes its own
 var wallet: Wallet
+var progression: Node
 var title := "Fabrika"
 ## Camera view to open at ({target, size}, e.g. where the player left it last time)
 var view := {}
@@ -148,6 +149,7 @@ func _ready() -> void:
 	camera.current = true
 	_build_hud()
 	select_tool("")
+	_update_output()
 
 
 func _process(delta: float) -> void:
@@ -193,6 +195,15 @@ func _update_output() -> void:
 	_money.text = "Para: " + Wallet.format(wallet.money)
 	for key in _tool_buttons:
 		var button: Button = _tool_buttons[key]
+		var locked: bool = progression != null and not progression.can_build(key)
+		button.disabled = locked
+		var lock := button.get_node_or_null("UnlockLabel")
+		if lock != null:
+			lock.visible = locked
+		if locked:
+			button.tooltip_text = "Kilitli · %d toplam evde açılır" % progression.PARTS_UNLOCK
+		else:
+			button.tooltip_text = ""
 		button.modulate.a = 1.0 if key == "erase" or wallet.can_afford(FactoryState.cost_of(TOOL_PRICES.get(key, key))) else 0.45
 
 
@@ -248,6 +259,9 @@ func _tunnel_pair_text(cell: Vector2i, piece: String) -> String:
 # --- Tools -------------------------------------------------------------------------------
 
 func select_tool(value: String) -> void:
+	if progression != null and not progression.can_build(value):
+		_hint.text = "Kilitli: parça montaj makinesi %d toplam evde açılır" % progression.PARTS_UNLOCK
+		return
 	if not moving.is_empty() and value != moving["kind"]:
 		# Put a machine being moved back where it was
 		machines.place(moving["kind"], moving["cell"], moving["rot"])
@@ -264,7 +278,7 @@ func select_tool(value: String) -> void:
 		"erase": _hint.text = "Sol tık + sürükle: bant ya da makine sil · B: bant · Esc: bırak"
 		"splitter", "merger": _hint.text = "Sol tık: %s koy · R: döndür · Esc: bırak" % BeltGrid.KIND_NAMES[value].to_lower()
 		"tunnel": _tunnel_hint()
-		"": _hint.text = "B: bant · 1: fırın · 2: konvertör · 3: ayırıcı · 4: birleştirici · 5: yeraltı · X: sil\nMakineye tık: taşı · Giriş kapısına tık: mal seç · Tab: ayrıntı · Boşluk: duraklat%s\nKaydır: WASD / sağ tuşla sürükle · Yakınlaştır: tekerlek%s" % [" · K: tedarik" if sandbox else "", "" if sandbox else " · Esc: haritaya dön"]
+		"": _hint.text = "B: bant · 1: fırın · 2: konvertör · 6: parça montaj · 3: ayırıcı · 4: birleştirici · 5: yeraltı · X: sil\nMakineye tık: taşı · Giriş kapısına tık: mal seç · Tab: ayrıntı · Boşluk: duraklat%s\nKaydır: WASD / sağ tuşla sürükle · Yakınlaştır: tekerlek%s" % [" · K: tedarik" if sandbox else "", "" if sandbox else " · Esc: haritaya dön"]
 		_: _hint.text = "Sol tık: %s kur · R: döndür · Esc: %s" % [MachineSet.name_of(value), "yerine koy" if not moving.is_empty() else "bırak"]
 	_update_ghost()
 	_update_info()
@@ -345,6 +359,8 @@ func _update_ghost() -> void:
 
 ## A left click with a machine tool: places it centred on `cell`, or says why not.
 func place_machine(cell: Vector2i) -> bool:
+	if progression != null and not progression.can_build(tool):
+		return false
 	var anchor := machine_anchor(tool, cell)
 	var why := machines.problem(tool, anchor, rotation_index())
 	if why != "":
@@ -452,6 +468,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_X: select_tool("" if tool == "erase" else "erase")
 			KEY_1: select_tool("" if tool == "blast_furnace" else "blast_furnace")
 			KEY_2: select_tool("" if tool == "converter" else "converter")
+			KEY_6: select_tool("" if tool == "parts_assembler" else "parts_assembler")
 			KEY_3: select_tool("" if tool == "splitter" else "splitter")
 			KEY_4: select_tool("" if tool == "merger" else "merger")
 			KEY_5: select_tool("" if tool == "tunnel" else "tunnel")
@@ -539,6 +556,8 @@ func open_gate_menu(index: int, at: Vector2) -> void:
 		note.add_theme_color_override("font_color", Color("#b8321f"))
 		column.add_child(note)
 	for good in [""] + Goods.NAMES.keys():
+		if good == "machine_parts" and progression != null and not progression.is_unlocked(good):
+			continue
 		var button := Button.new()
 		button.text = ("● " if layout.in_goods[index] == good else "") + ("Boş (mal gelmesin)" if good == "" else Goods.name_of(good))
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT

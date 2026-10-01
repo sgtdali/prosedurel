@@ -4,7 +4,7 @@ extends RefCounted
 ## floor and gates (`layout`), belts (`grid`), machines and the goods moving between them
 ## (`flow`). The interior scene draws one FactoryState at a time; the map runs them all.
 ## `advance` takes game time (real time x speed, 0 when paused) and runs the flow in fixed
-## FlowSim.STEP slices, at most MAX_FRAME seconds per call so a slow frame can't pile up.
+## FlowSim.STEP slices, with a bounded work budget and retained backlog on slow frames.
 
 const FactoryLayout = preload("res://factory/factory_layout.gd")
 const BeltGrid = preload("res://factory/belt_grid.gd")
@@ -12,7 +12,6 @@ const MachineSet = preload("res://factory/machine_set.gd")
 const FlowSim = preload("res://factory/flow_sim.gd")
 const Recipes = preload("res://factory/recipes.gd")
 
-const MAX_FRAME := 0.1
 ## Price of a belt cell (""), a splitter or merger and each end of a tunnel; taken up, they
 ## pay back in full.
 ## Machines cost their catalogue price and pay back half.
@@ -49,7 +48,11 @@ func contents_refund() -> int:
 
 
 func advance(game_seconds: float) -> void:
-	_left += minf(game_seconds, MAX_FRAME)
-	while _left >= FlowSim.STEP:
+	if game_seconds <= 0.0:
+		return
+	_left += maxf(game_seconds, 0.0)
+	var steps := 0
+	while _left + 0.00000001 >= FlowSim.STEP and steps < 120:
+		steps += 1
 		flow.step(FlowSim.STEP)
 		_left -= FlowSim.STEP

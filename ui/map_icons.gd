@@ -116,6 +116,11 @@ static func shape_of(good: String) -> Array:
 		"pig_iron":
 			return [{"points": [Vector2(-0.9, 0.55), Vector2(-0.55, -0.45), Vector2(0.55, -0.45), Vector2(0.9, 0.55)]},
 				{"points": [Vector2(-0.55, -0.45), Vector2(0.55, -0.45), Vector2(0.45, -0.15), Vector2(-0.45, -0.15)], "light": 0.3}]
+		"machine_parts":
+			var gear: Array[Vector2] = []
+			for i in 32:
+				gear.append(Vector2.UP.rotated(TAU * i / 32.0) * (1.0 if i % 4 < 2 else 0.73))
+			return [{"points": gear}, {"points": [Vector2(-0.25, -0.25), Vector2(0.25, -0.25), Vector2(0.25, 0.25), Vector2(-0.25, 0.25)], "light": -0.45}]
 		"steel":
 			return [{"points": [Vector2(-0.85, -0.7), Vector2(0.85, -0.7), Vector2(0.85, -0.4), Vector2(-0.85, -0.4)], "light": 0.2},
 				{"points": [Vector2(-0.2, -0.4), Vector2(0.2, -0.4), Vector2(0.2, 0.4), Vector2(-0.2, 0.4)]},

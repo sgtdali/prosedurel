@@ -1,21 +1,11 @@
 extends SceneTree
 
-## Town demand on png_map.tscn (economy/town_demand.gd, docs/kasaba_talebi.md): a town asks for
-## PER_HOUSE steel a month per house; steel up to that sells at the full price, the rest at a
-## quarter; at the month's end (the clock turning to day 1) a town that got its demand builds
-## GROWTH houses and asks for more, one that didn't stays as it is; towns don't grow on their own;
-## a full town (MAX_HOUSES) doesn't grow. Prints TOWN_DEMAND_OK or what failed.
-## Usage: godot --path <project> [--headless] --script res://tools/tests/test_town_demand.gd [-- <card screenshot.png>]
-
-var _failed := false
-
-
+var failed := false
 func _initialize() -> void:
-	call_deferred("_run")
+	call_deferred("run")
 
-
-func _run() -> void:
-	var map: Node = (load("res://scenes/png_map.tscn") as PackedScene).instantiate()
+func run() -> void:
+	var map := (load("res://scenes/png_map.tscn") as PackedScene).instantiate()
 	root.add_child(map)
 	await process_frame
 	var cities = map.get_node("Cities")
@@ -23,67 +13,92 @@ func _run() -> void:
 	var clock = map.get_node("Clock")
 	clock.speed = 0
 	var town: Dictionary = cities.towns[0]
-	var houses: int = town["houses"].size()
-	# No growing on their own
-	for i in 30:
-		await process_frame
-	_check(town["houses"].size() == houses, "a town grew on its own")
+	var initial: int = town["houses"].size()
+	print("INITIAL_POPULATION ", demand.total_population(), " TOWNS ", cities.towns.map(func(t: Dictionary) -> int: return t["houses"].size()))
+	check(not demand.is_unlocked("machine_parts"), "second product starts locked")
+	check(town["minimum_houses"] == initial, "initial floor")
+	demand.end_month()
+	check(town["houses"].size() == initial, "unserved town stays at floor")
 	var wanted: int = demand.demand_of(town)
-	_check(wanted == houses * demand.PER_HOUSE and wanted > 4, "demand %d for %d houses" % [wanted, houses])
-	var price: int = demand.Hauling.SALE_PRICES["steel"]
-	var sale: Dictionary = demand.sell(town, "steel", wanted - 4)
-	_check(sale["money"] == (wanted - 4) * price and sale["cheap"] == 0, "sale within demand: %s" % [sale])
-	sale = demand.sell(town, "steel", 10)
-	_check(sale["money"] == 4 * price + 6 * int(price * demand.OVERFLOW_SHARE) and sale["cheap"] == 6, "sale over demand: %s" % [sale])
-	# Month's end: it grew and asks for more
-	var grew := []
-	demand.town_grew.connect(func(t: Dictionary, added: int) -> void: grew.append([t, added]))
-	clock.day_passed.emit(1, 2, 1)
+	var sale: Dictionary = demand.sell(town, "steel", wanted + 6)
+	check(sale["money"] == wanted * 200 + 6 * 50 and sale["cheap"] == 6, "overflow pricing")
+	demand.end_month()
+	check(town["houses"].size() == initial and town["growth_streak"] == 1, "first full month only advances streak")
+	for month in 2:
+		demand.sell(town, "steel", demand.demand_of(town))
+		demand.end_month()
+	check(town["houses"].size() == initial + 3 and town["growth_streak"] == 0, "three full months grow by three")
 	var now: int = town["houses"].size()
-	var badge: Dictionary = map.get_node("MapSigns").badge_of(town)
-	_check(badge["age"] >= 0.0 and badge["glow"] >= 0.0, "no growth glow on the badge: %s" % [badge])
-	_check(now == houses + demand.GROWTH and grew.size() == 1 and is_same(grew[0][0], town), "the town should grow by %d: %d -> %d" % [demand.GROWTH, houses, now])
-	_check(demand.delivered_of(town) == 0 and demand.demand_of(town) == now * demand.PER_HOUSE, "month count not started again")
-	# A month with nothing: no growth
-	clock.day_passed.emit(1, 3, 1)
-	_check(town["houses"].size() == now, "grew without its demand")
-	# Only day 1 ends a month
+	demand.sell(town, "steel", ceili(demand.demand_of(town) * 0.5))
+	demand.end_month()
+	check(town["houses"].size() == now and town["growth_streak"] == 0, "partial month stable")
+	demand.sell(town, "steel", floori(demand.demand_of(town) * 0.3))
+	demand.end_month()
+	check(town["houses"].size() == now - 1, "low month immediately loses one")
+	for month in 8:
+		demand.end_month()
+	check(town["houses"].size() == initial, "shrink stops at floor")
+	# Interrupted full months never carry a growth streak across the gap.
 	demand.sell(town, "steel", demand.demand_of(town))
-	clock.day_passed.emit(1, 3, 2)
-	_check(town["houses"].size() == now and demand.delivered_of(town) > 0, "a month ended on day 2")
-	# A full town doesn't grow
-	var full := {"center": Vector2(-500, -500), "houses": [], "name": "dolu"}
-	for i in demand.MAX_HOUSES:
-		full["houses"].append({"pos": Vector2(-9999.0, -9999.0)})
-	cities.towns.append(full)
-	demand.sell(full, "steel", demand.demand_of(full))
-	clock.day_passed.emit(1, 4, 1)
-	_check(full["houses"].size() == demand.MAX_HOUSES and full.get("grown", 0) == 0, "a full town grew")
-	cities.towns.erase(full)
-	_check(town["history"].size() == 3 and town["history"][0]["grew"] and not town["history"][1]["grew"], "history: %s" % [town.get("history")])
-	var args := OS.get_cmdline_user_args()
-	if args.size() > 0:
-		# The town's card, a few more months in, part way through this one
-		for month in 5:
-			demand.sell(town, "steel", demand.demand_of(town) if month % 2 == 0 else demand.demand_of(town) / 2)
-			clock.day_passed.emit(1, 5 + month, 1)
-		demand.sell(town, "steel", int(demand.demand_of(town) * 0.6))
-		clock.day = 18
-		var camera: Camera2D = map.get_node("Camera2D")
-		camera.set_process(false)
-		camera.position = town["center"] + Vector2(-150, 60)
-		camera.zoom = Vector2.ONE * 1.1
-		map.get_node("HUD/TownPanel").select(town)
-		for i in 4:
-			await process_frame
-		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png(args[0])
-	if not _failed:
-		print("TOWN_DEMAND_OK houses %d -> %d, demand %d -> %d" % [houses, now, wanted, demand.demand_of(town)])
-	quit(1 if _failed else 0)
+	demand.end_month()
+	demand.end_month()
+	check(town["growth_streak"] == 0, "incomplete month resets streak")
+	# Build real houses to the global threshold, then prove permanence after losses.
+	for candidate in cities.towns:
+		if demand.total_population() >= demand.PARTS_UNLOCK:
+			break
+		cities.grow(candidate, mini(60 - candidate["houses"].size(), demand.PARTS_UNLOCK - demand.total_population()))
+	demand.refresh_progression()
+	check(demand.is_unlocked("machine_parts"), "population unlock reachable on actual town plots")
+	var large: Dictionary = {}
+	for candidate in cities.towns:
+		if candidate["houses"].size() >= demand.PARTS_TOWN_SIZE:
+			large = candidate
+			break
+	check(not large.is_empty(), "a town can reach the second demand tier")
+	if not large.is_empty():
+		check(demand.required_goods(large).has("steel") and demand.required_goods(large).has("machine_parts"), "old need stays with new need")
+		large["delivered"] = 0
+		large["deliveries"] = {}
+		var parts: int = demand.demand_of(large, "machine_parts")
+		demand.sell(large, "steel", demand.demand_of(large) * 3)
+		demand.sell(large, "machine_parts", floori(parts * 0.3))
+		check(demand.satisfaction(large) <= 0.30, "steel overflow cannot compensate parts shortage")
+		var before: int = large["houses"].size()
+		demand.end_month()
+		check(large["houses"].size() == before - 1, "weakest product causes shrink")
+	for candidate in cities.towns:
+		cities.shrink(candidate, 60, candidate["minimum_houses"])
+	demand.refresh_progression()
+	check(demand.total_population() < demand.PARTS_UNLOCK and demand.is_unlocked("machine_parts"), "unlock retained below threshold")
+	check(demand.required_goods(town) == ["steel"], "small town demand remains local")
+	check(town["history"].size() == demand.HISTORY, "history bounded")
+	# Exact 30% boundary and 25 monthly transitions with scripted shipments.
+	var boundary := {"center": Vector2(-1000, -1000), "name": "Sınır testi", "houses": [], "minimum_houses": 10}
+	for i in 20:
+		boundary["houses"].append({"pos": Vector2(-9999, -9999)})
+	cities.towns.append(boundary)
+	demand.sell(boundary, "steel", 40)
+	demand.sell(boundary, "machine_parts", 6)
+	demand.end_month()
+	check(boundary["houses"].size() == 19, "exact 30 percent shrinks")
+	cities.towns.erase(boundary)
+	var start_total: int = demand.total_population()
+	for month in 25:
+		for candidate in cities.towns.slice(0, 4):
+			for good in demand.required_goods(candidate):
+				demand.sell(candidate, good, demand.demand_of(candidate, good))
+		clock.day_passed.emit(1 + month / 12, 1 + month % 12, 1)
+		for candidate in cities.towns:
+			check(candidate["houses"].size() >= candidate["minimum_houses"] and candidate["houses"].size() <= demand.MAX_HOUSES, "population bounds over long run")
+	check(demand.total_population() > start_total and demand.is_unlocked("machine_parts"), "25-month progression persists")
+	check(cities.towns[0]["history"].size() == 12, "long-run history bounded")
+	print("SCRIPTED_25_MONTHS population ", start_total, " -> ", demand.total_population())
+	if not failed:
+		print("TOWN_DEMAND_OK")
+	quit(1 if failed else 0)
 
-
-func _check(ok: bool, what: String) -> void:
+func check(ok: bool, message: String) -> void:
 	if not ok:
-		print("TOWN_DEMAND_FAIL ", what)
-		_failed = true
+		failed = true
+		print("TOWN_DEMAND_FAIL ", message)

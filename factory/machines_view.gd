@@ -95,7 +95,11 @@ func _build_model(kind: String, cell: Vector2i, rot: int, ghost: int) -> Array:
 	root.rotation.y = -rot * PI * 0.5
 	var body := Node3D.new()
 	root.add_child(body)
-	var glows: Array = _converter(body, ghost) if kind == "converter" else _furnace(body, ghost)
+	var glows: Array
+	match kind:
+		"converter": glows = _converter(body, ghost)
+		"parts_assembler": glows = _assembler(body, ghost)
+		_: glows = _furnace(body, ghost)
 	var lamps := []
 	for port: Dictionary in MachineSet.TYPES[kind]["ports"]:
 		var at: Vector2i = port["at"]
@@ -168,6 +172,19 @@ func _converter(body: Node3D, ghost: int) -> Array:
 	var axle := _add(body, _cylinder_mesh(0.09, 0.09, 1.4), Vector3(0.0, 1.0, 0.0), Color("#3b3836"), ghost)
 	axle.rotation.z = PI * 0.5
 	return [[mouth, glow]]
+
+
+func _assembler(body: Node3D, ghost: int) -> Array:
+	var metal := Color("#527a7b")
+	_add(body, _box_mesh(Vector3(2.9, 0.12, 2.9)), Vector3(0, 0.06, 0), Color("#b3ac9c"), ghost)
+	_add(body, _box_mesh(Vector3(2.3, 0.65, 2.3)), Vector3(0, 0.45, 0), metal, ghost)
+	for x in [-0.95, 0.95]:
+		_add(body, _box_mesh(Vector3(0.25, 1.3, 1.4)), Vector3(x, 1.2, 0), metal, ghost)
+	_add(body, _box_mesh(Vector3(2.2, 0.3, 1.5)), Vector3(0, 1.9, 0), metal, ghost)
+	_add(body, _cylinder_mesh(0.23, 0.23, 0.8), Vector3(0, 1.25, 0), Color("#d9bd68"), ghost)
+	_add(body, _box_mesh(Vector3(0.6, 0.16, 0.6)), Vector3(0, 0.9, 0), Color("#a7b8bc"), ghost)
+	var glow := Color("#66dbaf")
+	return [[_add(body, _box_mesh(Vector3(0.6, 0.16, 0.04)), Vector3(0, 1.9, 0.77), glow, ghost, true), glow]]
 
 
 func _add(parent: Node3D, mesh: Mesh, at: Vector3, color: Color, ghost: int, glow := false) -> MeshInstance3D:

@@ -168,3 +168,63 @@ Değerlendirilecek döngü: "Kasabayı büyüttüm → yeni üretim açıldı �
 - `fabrika_ici.md` — fabrika içi bant zincirleri
 - Araç ilerlemesi (kamyon → büyük kamyon → tren): darboğaz harita ↔ fabrika arasında gidip gelir; çekirdek
   döngü oturunca ele alınacak.
+
+
+## Oyuna uygulanan ilk deneme — 2026-10-01
+
+Uygulama öncesi proje `5e462b4` commit'iyle GitHub'a pushlandı. İlk oynanabilir döngü uygulanmıştır.
+Bu bölümdeki açık sayısal seçimler deneme ayarlarıdır; yeni tasarım onayı olarak değerlendirilmez.
+
+| Ayar | İlk uygulama |
+|---|---|
+| Nüfus birimi | Mevcut ev sayısı; başlangıç toplamı 138 ev |
+| Asgari nüfus | Her kasabanın oyun başındaki gerçek ev sayısı |
+| Çelik talebi | Ev başına ayda 2; fiyat 200 / fazla ürün 50 |
+| Büyüme | Bütün ürünler 3 ay üst üste tam karşılanırsa +3 ev, üst sınır 60 |
+| Küçülme | En az karşılanan ürün %30 ve altındaysa ay sonunda −1 ev; başlangıç sınırında durur |
+| Ara durum | %30 üzeri, %100 altı: nüfus sabit; tam ay serisi sıfırlanır |
+| İlk global açılım | 150 toplam ev: makine parçası tarifi ve parça montaj makinesi birlikte açılır |
+| Yerel ikinci ihtiyaç | Üretim açıldıktan sonra 20 ve üzeri evli kasabalar çeliğin yanında makine parçası ister |
+| Parça talebi | Ev başına ayda 1; fiyat 600 / fazla ürün 150 |
+| Montaj | 1 çelik + 1 bakır → 1 parça; 4 saniye, 3×3 hücre; makine 4.500 |
+| Kamyon bakımı | Bütün sahip olunan kamyonlar için araç başına ayda 40; boşta olanlar dahil |
+| Bakım borcu | Para yetmezse bakiye eksiye iner; satışlar borcu kapatır. Araçlar çalışır, yeni satın alma yeterli para ister |
+| Yol yapımı | Oyuncunun çizdiği son yol eğrisinin uzunluğu × 1, yukarı yuvarlanır; bedel önizlemede görünür |
+| Yol geri alma | Ödenen yol bedeli iade edilir; silinen/başlangıç/otomatik erişim yolları ücretsiz para üretmez |
+
+Yerel nüfus 20'nin altına indiğinde parça talebi kalkar; çelik talebi sürer. Üretim açılımı kalır.
+Yola çıkarılmış parça böyle bir kasabaya ay sonunda ulaşıyorsa %25 fiyatla satılabilir; yeni yüklemeler
+kasabanın istediği ürünleri seçer ve en eksik ürüne öncelik verir. Fazla teslimat gelecek aya taşınmaz.
+Boş arsa yoksa büyüme sığan evlerle sınırlıdır; kart yeni yol/arsa ihtiyacını gösterir.
+Açılımlar mevcut oyun oturumu boyunca kalıcıdır; projede kayıt/yükleme sistemi bulunmadığından bu çalışma
+ayrıca kayıt sistemi eklemez.
+
+**Görünürlük:** üst kart toplam nüfusu, ilk açılımı ve filonun aylık bakımını gösterir. Kasaba kartında
+ürün başına teslimat/talep ve yüzde, tam ay serisi, asgari nüfus, ay sonu koşulu, kilitli sonraki ihtiyaç
+ve son 12 ay vardır. Harita rozeti en az karşılanan ürünü gösterir. Fabrika kataloğunda montaj makinesi
+baştan görünür, kilitliyken kurulamaz; açıldıktan sonra `6` kısayoluyla da seçilir.
+
+**Doğrulama:** `test_town_demand.gd` büyüme, seri kesilmesi, küçülme, tam %30 sınırı, yerel talep,
+kalıcı açılım ve 25 aylık senaryolu teslimat akışını kontrol eder. Bu uzun akış üretim/rota kapasitesi
+ölçümü değildir; aylık teslimatlar test tarafından sağlanır. `test_progression_economy.gd` çelik ve
+bakırın kamyon tesliminden bantlara, montaja, çıkış stokuna ve kasaba satışına ulaşmasını; bakım borcunu;
+yol bedelini, yetersiz bütçeyi ve geri alma iadesini kontrol eder. 4× hızda 20 FPS üretim süresi de
+kontrol edilir. Mevcut fabrika, taşıma, fabrika görünümü, işaretler ve bina düzenleme testleri çalıştırılır.
+Kasaba ve montaj fabrikası gerçek OpenGL görüntülerinden incelenir.
+
+**Henüz doğrulanmayan:** 20–30 dakikalık oyuncu deneyimi ve üretim/taşıma dengesi. Otomatik testler
+motivasyonun eğlenceli olduğunu kanıtlamaz. Sonraki denemede 150/20 eşikleri, üretim miktarları ve giderler
+oyuncu akışına göre ayarlanmalıdır. Kablo, kasabalar arasında ileri ürün çeşitliliği, büyük fabrika,
+gelişmiş splitter, tren ve fabrika bakımı örnek/gelecek kapsam olarak kalır.
+
+
+### Bu uygulamanın test sonucu
+
+- Yedi kontrol geçti: `test_town_demand`, `test_progression_economy`, `test_factory_state`,
+  `test_hauling`, `test_factory_view`, `test_factory_signs`, `test_building_edit`.
+- 25 aylık senaryolu teslimatta toplam nüfus 138 → 188; yeni arsa bulunamayan kasabalarda büyüme
+  sığan evlerle sınırlı kaldı. Açılım ve 12 aylık geçmiş korunuyor.
+- Yol çizim kontrolünde diğer senaryolar geçti; önceden de başarısız olan
+  `bridge, slanted but short` senaryosu `nehir` gerekçesiyle hâlâ reddediliyor. Bu çalışma köprü
+  geometrisi kurallarını değiştirmedi. Test betiği bir başarısızlık yazmasına rağmen çıkış kodu 0
+  verdiğinden sonuç çıktıdan değerlendirilmiştir.

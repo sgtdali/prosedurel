@@ -151,6 +151,7 @@ func _refresh() -> void:
 		if entry["sell"].disabled:
 			entry["sell"].modulate.a = 0.0
 	_buy.disabled = _hauling.trucks_of(_hauling.selected_depot).size() >= Hauling.MAX_TRUCKS
+	_buy.tooltip_text = "Kamyon: %d · Sabit bakım: %d / ay" % [Hauling.TRUCK_COST, Hauling.MONTHLY_UPKEEP]
 	_gauge.queue_redraw()
 	_card.reset_size()
 

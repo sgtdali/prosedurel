@@ -35,8 +35,8 @@ const MENU_TAB := Color("#29353c")
 const MENU_SELECTED := Color("#bdc7c9")
 const LIGHT_TEXT := Color("#eff1e8")
 
-const GROUPS := {"machines": ["blast_furnace", "converter"], "pieces": ["splitter", "merger", "tunnel"]}
-const KEYS := {"belt": "B", "blast_furnace": "1", "converter": "2", "splitter": "3", "merger": "4", "tunnel": "5", "erase": "X"}
+const GROUPS := {"machines": ["blast_furnace", "converter", "parts_assembler"], "pieces": ["splitter", "merger", "tunnel"]}
+const KEYS := {"belt": "B", "blast_furnace": "1", "converter": "2", "parts_assembler": "6", "splitter": "3", "merger": "4", "tunnel": "5", "erase": "X"}
 ## A tool's price key (factory_state.gd `cost_of`)
 const PRICE_KEYS := {"belt": "", "tunnel": "tunnel_in"}
 
@@ -278,6 +278,14 @@ func _item_button(kind: String) -> Button:
 	key.position = Vector2(4, 4)
 	key.size = Vector2(20, 20)
 	key.draw.connect(_draw_key.bind(key, KEYS[kind]))
+	if kind == "parts_assembler":
+		var lock := Label.new()
+		lock.name = "UnlockLabel"
+		lock.text = "150 ev"
+		lock.position = Vector2(48, 74)
+		lock.add_theme_font_size_override("font_size", 13)
+		lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.add_child(lock)
 	button.add_child(key)
 	return button
 
@@ -538,6 +546,8 @@ static func details_of(kind: String) -> Dictionary:
 			details = {"title": "Yüksek Fırın", "description": "Demir cevherini kömürle eritip pik demir yapar. 3×3 hücre: girişler solda, çıkış sağda."}
 		"converter":
 			details = {"title": "Konvertör", "description": "Pik demiri kömürle çeliğe çevirir. 2×2 hücre. Bir fırın iki konvertörü besler."}
+		"parts_assembler":
+			details = {"title": "Parça Montaj", "description": "Çelik ve bakırdan makine parçası üretir. 150 toplam evde açılır. 3×3 hücre."}
 		"splitter":
 			details = {"title": "Ayırıcı", "description": "Arkadan gelen malı sırayla öne, sola ve sağa dağıtır; dolu çıkışı atlar.", "pace": "1 → 3"}
 		"merger":

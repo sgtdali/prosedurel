@@ -14,7 +14,7 @@ const FactoryInterior = preload("res://factory/factory_interior.gd")
 @export var wallet_path: NodePath = ^"../Wallet"
 @export var hud_path: NodePath = ^"../HUD"
 ## HUD cards that stay on show inside a factory
-@export var kept_cards: PackedStringArray = ["MoneyPanel", "DatePanel", "SpeedPanel"]
+@export var kept_cards: PackedStringArray = ["MoneyPanel", "DatePanel", "SpeedPanel", "ProgressionPanel"]
 
 ## The record of the factory open now, {} when none
 var open_record := {}
@@ -49,6 +49,7 @@ func open(record: Dictionary) -> void:
 	interior = FactoryInterior.new()
 	interior.state = record["state"]
 	interior.wallet = get_node(wallet_path)
+	interior.progression = get_node_or_null("../Demand")
 	interior.title = record["name"]
 	interior.view = record.get("view", {})
 	interior.close_requested.connect(close)

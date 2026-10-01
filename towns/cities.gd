@@ -88,6 +88,19 @@ func grow(town: Dictionary, count: int) -> int:
 	return added
 
 
+## Population losses remove the newest houses and release their plots.
+func shrink(town: Dictionary, count: int, minimum: int) -> int:
+	var removed := 0
+	while removed < count and town["houses"].size() > minimum:
+		var house: Dictionary = town["houses"].pop_back()
+		if house.has("node") and is_instance_valid(house["node"]):
+			house["node"].queue_free()
+		if house.has("obstacle"):
+			_network.obstacles.erase(house["obstacle"])
+		removed += 1
+	return removed
+
+
 ## The area a town may build in now (it widens with its houses, up to its zone).
 func town_radius(town: Dictionary) -> float:
 	return minf(BASE_RADIUS + RADIUS_GROWTH * sqrt(float(town["houses"].size())), ZONE_RADIUS)
@@ -266,7 +279,7 @@ func _on_roads_changed() -> void:
 				if _distance_to_road(pos, _network.roads[r]) < reach:
 					served = true
 					break
-			if not served:
+			if not served and houses.size() > town.get("minimum_houses", 0):
 				houses[i]["node"].queue_free()
 				_network.obstacles.erase(houses[i]["obstacle"])
 				houses.remove_at(i)

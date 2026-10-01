@@ -31,7 +31,9 @@ const TRUCK_COST := 1500
 const MAX_TRUCKS := 8
 const CAPACITY := 20
 ## Money per unit a town pays at its sales depot (only processed goods; docs/denge.md)
-const SALE_PRICES := {"steel": 200}
+const SALE_PRICES := {"steel": 200, "machine_parts": 600}
+const MONTHLY_UPKEEP := 40
+var last_upkeep := 0
 ## Seconds (game time) a truck at a factory waits for half a load before leaving with less
 const PATIENCE := 12.0
 ## Game seconds spent loading or unloading, and between tries when stuck
@@ -151,6 +153,16 @@ func _ready() -> void:
 	_demand = get_node_or_null(demand_path)
 	if _placer != null:
 		_placer.building_removed.connect(_on_building_removed)
+	if _clock != null:
+		_clock.day_passed.connect(func(_year: int, _month: int, day: int) -> void:
+			if day == 1:
+				charge_upkeep())
+
+
+func charge_upkeep() -> void:
+	last_upkeep = trucks.size() * MONTHLY_UPKEEP
+	if _wallet != null and last_upkeep > 0:
+		_wallet.charge(last_upkeep)
 
 
 func _process(delta: float) -> void:
@@ -540,7 +552,12 @@ func _load_from_factory(truck: Truck) -> bool:
 	var stock: FactoryLayout = _gates_of(truck.pickup)
 	var selling: bool = truck.dropoff.get("kind", "") == "sales"
 	var gates: FactoryLayout = _gates_of(truck.dropoff)
-	for good in stock.out_stock:
+	var goods: Array = stock.out_stock.keys()
+	if selling and _demand != null and truck.dropoff.has("town"):
+		var town: Dictionary = truck.dropoff["town"]
+		goods = goods.filter(func(good: String) -> bool: return _demand.required_goods(town).has(good))
+		goods.sort_custom(func(a: String, b: String) -> bool: return _demand.ratio_of(town, a) < _demand.ratio_of(town, b))
+	for good in goods:
 		if selling and not SALE_PRICES.has(good) or gates != null and gates.room_for(good) <= 0:
 			continue
 		var ready: int = stock.out_stock[good]
@@ -573,6 +590,8 @@ func _unload(truck: Truck) -> bool:
 		var cheap := 0
 		if _demand != null and truck.dropoff.has("town"):
 			var sale: Dictionary = _demand.sell(truck.dropoff["town"], truck.ore, truck.amount)
+			if sale.get("accepted", truck.amount) == 0:
+				return false
 			money = sale["money"]
 			cheap = sale["cheap"]
 		if _wallet != null:
