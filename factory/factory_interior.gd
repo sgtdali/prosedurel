@@ -41,6 +41,7 @@ const BeltsView = preload("res://factory/belts_view.gd")
 const MachinesView = preload("res://factory/machines_view.gd")
 const ItemsView = preload("res://factory/items_view.gd")
 const FactorySigns = preload("res://factory/factory_signs.gd")
+const FactoryBuildBar = preload("res://factory/factory_build_bar.gd")
 const Wallet = preload("res://economy/wallet.gd")
 const Goods = preload("res://facility/goods.gd")
 
@@ -91,6 +92,8 @@ var _money: Label
 var _gate_menu: PanelContainer
 var signs: FactorySigns
 var _tool_buttons := {}
+## The build tools at the bottom
+var build_bar: FactoryBuildBar
 var _dragging := false
 var _last_cell := Vector2i(-1, -1)
 var _hover_cell := Vector2i(-1, -1)
@@ -254,8 +257,8 @@ func select_tool(value: String) -> void:
 	_dragging = false
 	if signs != null:
 		signs.show_ports = value == "belt" or is_machine_tool()
-	for key in _tool_buttons:
-		_tool_buttons[key].set_pressed_no_signal(key == value)
+	if build_bar != null:
+		build_bar.sync(value)
 	match value:
 		"belt": _hint.text = "Sol tık + sürükle: bant çiz · R: döndür · X: sil · Esc: bırak"
 		"erase": _hint.text = "Sol tık + sürükle: bant ya da makine sil · B: bant · Esc: bırak"
@@ -647,35 +650,11 @@ func _build_hud() -> void:
 	corner.resized.connect(place_tally)
 	tally.resized.connect(place_tally)
 	place_tally.call_deferred()
-	# Tool palette, bottom centre
-	var holder := Control.new()
-	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(holder)
-	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 8)
-	holder.add_child(bar)
-	for entry in [["belt", "Bant (B)"], ["blast_furnace", "Yüksek fırın (1)"], ["converter", "Konvertör (2)"], ["splitter", "Ayırıcı (3)"], ["merger", "Birleştirici (4)"], ["tunnel", "Yeraltı (5)"], ["erase", "Sil (X)"]]:
-		var button := Button.new()
-		button.toggle_mode = true
-		var price_of: String = TOOL_PRICES.get(entry[0], entry[0])
-		button.text = entry[1] if entry[0] == "erase" else "%s · %s" % [entry[1], Wallet.format(FactoryState.cost_of(price_of))]
-		button.focus_mode = Control.FOCUS_NONE
-		button.add_theme_font_size_override("font_size", 18)
-		button.add_theme_color_override("font_color", TEXT)
-		button.add_theme_color_override("font_pressed_color", CARD)
-		button.add_theme_color_override("font_hover_pressed_color", CARD)
-		for state in ["normal", "hover", "pressed", "hover_pressed"]:
-			button.add_theme_stylebox_override(state, _card_style(state.begins_with("pressed") or state == "hover_pressed", true))
-		var key: String = entry[0]
-		button.toggled.connect(func(on: bool) -> void: select_tool(key if on else ""))
-		bar.add_child(button)
-		_tool_buttons[key] = button
-	var place := func() -> void:
-		bar.position = Vector2((holder.size.x - bar.size.x) * 0.5, holder.size.y - bar.size.y)
-	holder.resized.connect(place)
-	bar.resized.connect(place)
-	place.call_deferred()
+	# Build tools, bottom centre (cards and a grouped catalog, like the map's build bar)
+	build_bar = FactoryBuildBar.new()
+	build_bar.tool_chosen.connect(select_tool)
+	layer.add_child(build_bar)
+	_tool_buttons = build_bar.buttons
 	# The in gate menu, hidden until a gate is clicked
 	_gate_menu = PanelContainer.new()
 	var menu_style := _card_style(false)
