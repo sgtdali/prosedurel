@@ -1,0 +1,270 @@
+extends RefCounted
+
+## A factory run as production lines instead of machines on belts (docs/hat_fabrikasi.md). It has
+## no inside to enter: goods brought in wait in shared input stocks, every line in a slot takes
+## what its recipe needs from them at a steady pace, and what comes out goes to the output
+## stocks. Steel is split by `parts_share` between the output and the parts lines (what the
+## parts lines can't hold goes to the output, nothing is lost). The decisions are which lines,
+## how many (slots), how fast (level) and where the steel goes; no layout, no belts.
+## Rates are per game second. Prices are paid from `wallet` (economy/wallet.gd) when set, else
+## from `money` (tests).
+
+const Goods = preload("res://facility/goods.gd")
+
+## Per second at level 1. A steel line is the old balanced unit (1 furnace + 2 converters); a
+## parts line uses up what one steel line makes.
+const LINES := {
+	"steel": {"name": "Çelik hattı", "cost": 11000,
+		"inputs": {"iron": 1.0, "coal": 1.0}, "outputs": {"steel": 0.5}},
+	"parts": {"name": "Parça hattı", "cost": 9000,
+		"inputs": {"steel": 0.5, "copper": 0.5}, "outputs": {"machine_parts": 0.5}},
+}
+## Speed per level; upgrading to level n+1 costs half the line's price times n
+const LEVEL_SPEED: Array[float] = [1.0, 1.5, 2.0]
+const INPUT_GOODS: Array[String] = ["iron", "coal", "copper"]
+const OUTPUT_GOODS: Array[String] = ["steel", "machine_parts"]
+const CAPACITY := 200.0
+## Steel waiting for the parts lines
+const PARTS_STEEL_CAPACITY := 20.0
+const START_SLOTS := 4
+const MAX_SLOTS := 8
+const SLOT_COST := 5000
+## Longest piece of time run at once
+const MAX_STEP := 0.1
+
+var money := 0
+var wallet = null
+var slots := START_SLOTS
+## One per open slot: {} when empty, else {kind, level, status ("working" / "starved" /
+## "blocked" / "idle"), short (the good missing when starved), rate (0..1, recent pace)}
+var lines: Array[Dictionary] = []
+var inputs := {}
+var outputs := {}
+var parts_steel := 0.0
+## 0..1: how much of the steel made goes to the parts lines
+var parts_share := 0.0
+## Recent units per second made and used, per good (smoothed)
+var made := {}
+var used := {}
+
+
+func _init(start_money := 0) -> void:
+	money = start_money
+	for good in INPUT_GOODS:
+		inputs[good] = 0.0
+	for good in OUTPUT_GOODS:
+		outputs[good] = 0.0
+	for i in slots:
+		lines.append({})
+
+
+static func info(kind: String) -> Dictionary:
+	return LINES[kind]
+
+
+## "1/sn Demir + 1/sn Kömür → 0,5/sn Çelik" at `level`
+static func recipe_text(kind: String, level := 1) -> String:
+	var speed: float = LEVEL_SPEED[level - 1]
+	var ins: Array[String] = []
+	for good in info(kind)["inputs"]:
+		ins.append("%s %s" % [_rate(info(kind)["inputs"][good] * speed), Goods.name_of(good)])
+	var outs: Array[String] = []
+	for good in info(kind)["outputs"]:
+		outs.append("%s %s" % [_rate(info(kind)["outputs"][good] * speed), Goods.name_of(good)])
+	return "%s → %s" % [" + ".join(ins), " + ".join(outs)]
+
+
+static func _rate(value: float) -> String:
+	return ("%.2f" % value).rstrip("0").rstrip(".").replace(".", ",")
+
+
+func build(slot: int, kind: String) -> bool:
+	if slot < 0 or slot >= slots or not lines[slot].is_empty() or not _spend(info(kind)["cost"]):
+		return false
+	lines[slot] = {"kind": kind, "level": 1, "status": "idle", "short": "", "rate": 0.0}
+	return true
+
+
+## Price of the next level, 0 when the line is at the top
+func upgrade_cost(slot: int) -> int:
+	var line := lines[slot]
+	if line.is_empty() or line["level"] >= LEVEL_SPEED.size():
+		return 0
+	return info(line["kind"])["cost"] / 2 * line["level"]
+
+
+func upgrade(slot: int) -> bool:
+	var cost := upgrade_cost(slot)
+	if cost == 0 or not _spend(cost):
+		return false
+	lines[slot]["level"] += 1
+	return true
+
+
+## What taking the line out gives back: half of everything paid for it
+func refund(slot: int) -> int:
+	var line := lines[slot]
+	if line.is_empty():
+		return 0
+	var paid: int = info(line["kind"])["cost"]
+	for level in range(1, line["level"]):
+		paid += info(line["kind"])["cost"] / 2 * level
+	return paid / 2
+
+
+func remove(slot: int) -> bool:
+	if lines[slot].is_empty():
+		return false
+	_earn(refund(slot))
+	lines[slot] = {}
+	return true
+
+
+func open_slot() -> bool:
+	if slots >= MAX_SLOTS or not _spend(SLOT_COST):
+		return false
+	slots += 1
+	lines.append({})
+	return true
+
+
+## A truck unloads: takes what fits of `amount`, returns it
+func deliver(good: String, amount: float) -> float:
+	var taken := minf(amount, CAPACITY - inputs[good])
+	inputs[good] += taken
+	return taken
+
+
+## A truck loads: gives what there is of `amount`, returns it
+func take_out(good: String, amount: float) -> float:
+	var given := minf(amount, outputs[good])
+	outputs[good] -= given
+	return given
+
+
+## Units per second of `good` this factory wants when every line runs full
+func need_of(good: String) -> float:
+	var total := 0.0
+	for line in lines:
+		if not line.is_empty():
+			total += info(line["kind"])["inputs"].get(good, 0.0) * LEVEL_SPEED[line["level"] - 1]
+	return total
+
+
+func advance(seconds: float) -> void:
+	while seconds > 0.0:
+		var dt := minf(seconds, MAX_STEP)
+		seconds -= dt
+		var step_made := {}
+		var step_used := {}
+		# Steel lines first, so the parts lines can use the steel made this step. Lines of a kind
+		# share a short input in proportion to what they need, so a shortage slows them all.
+		for kind in ["steel", "parts"]:
+			var group: Array[Dictionary] = []
+			var wanted := {}
+			for line in lines:
+				if not line.is_empty() and line["kind"] == kind:
+					group.append(line)
+					for good in info(kind)["inputs"]:
+						wanted[good] = wanted.get(good, 0.0) + info(kind)["inputs"][good] * LEVEL_SPEED[line["level"] - 1]
+			var stock := {}
+			for good in wanted:
+				stock[good] = _stock(good)
+			for line in group:
+				var allot := {}
+				for good in wanted:
+					allot[good] = stock[good] * info(kind)["inputs"][good] * LEVEL_SPEED[line["level"] - 1] / wanted[good]
+				_run(line, dt, allot, step_made, step_used)
+		var blend := minf(dt * 0.5, 1.0)
+		for good in INPUT_GOODS + OUTPUT_GOODS:
+			made[good] = lerpf(made.get(good, 0.0), step_made.get(good, 0.0) / dt, blend)
+			used[good] = lerpf(used.get(good, 0.0), step_used.get(good, 0.0) / dt, blend)
+
+
+## Runs `line` for `dt`; `allot` is its part of each input stock.
+func _run(line: Dictionary, dt: float, allot: Dictionary, step_made: Dictionary, step_used: Dictionary) -> void:
+	var recipe := info(line["kind"])
+	var speed: float = LEVEL_SPEED[line["level"] - 1] * dt
+	var share := 1.0
+	var limit := ""
+	for good in recipe["inputs"]:
+		var need: float = recipe["inputs"][good] * speed
+		var have: float = minf(allot[good], _stock(good))
+		if have < need and have / need < share:
+			share = have / need
+			limit = good
+	for good in recipe["outputs"]:
+		var make: float = recipe["outputs"][good] * speed
+		var room := _room(good)
+		if room < make * share:
+			share = room / make
+			limit = "full"
+	for good in recipe["inputs"]:
+		var amount: float = recipe["inputs"][good] * speed * share
+		_take(good, amount)
+		step_used[good] = step_used.get(good, 0.0) + amount
+	for good in recipe["outputs"]:
+		var amount: float = recipe["outputs"][good] * speed * share
+		_put(good, amount)
+		step_made[good] = step_made.get(good, 0.0) + amount
+	if share >= 0.999:
+		line["status"] = "working"
+		line["short"] = ""
+	elif limit == "full":
+		line["status"] = "blocked"
+		line["short"] = ""
+	else:
+		line["status"] = "starved"
+		line["short"] = limit
+	line["rate"] = lerpf(line["rate"], share, minf(dt * 2.0, 1.0))
+
+
+## What a line can take of `good`: steel for a parts line comes from the steel kept for them
+func _stock(good: String) -> float:
+	return parts_steel if good == "steel" else inputs[good]
+
+
+func _take(good: String, amount: float) -> void:
+	if good == "steel":
+		parts_steel -= amount
+	else:
+		inputs[good] -= amount
+
+
+func _room(good: String) -> float:
+	var room: float = CAPACITY - outputs[good]
+	if good == "steel":
+		room += PARTS_STEEL_CAPACITY - parts_steel
+	return room
+
+
+func _put(good: String, amount: float) -> void:
+	if good != "steel":
+		outputs[good] += amount
+		return
+	var to_parts := minf(amount * parts_share, PARTS_STEEL_CAPACITY - parts_steel)
+	var to_out := minf(amount - to_parts, CAPACITY - outputs["steel"])
+	# What the output can't hold waits for the parts lines after all
+	to_parts += amount - to_parts - to_out
+	parts_steel += to_parts
+	outputs["steel"] += to_out
+
+
+func can_afford(amount: int) -> bool:
+	return wallet.can_afford(amount) if wallet != null else money >= amount
+
+
+func _spend(amount: int) -> bool:
+	if wallet != null:
+		return wallet.spend(amount)
+	if money < amount:
+		return false
+	money -= amount
+	return true
+
+
+func _earn(amount: int) -> void:
+	if wallet != null:
+		wallet.earn(amount)
+	else:
+		money += amount

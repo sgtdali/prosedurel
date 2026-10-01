@@ -1,0 +1,85 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://sandbox/factory_campus_sandbox.gd" id="1_sandbox"]
+[ext_resource type="Script" path="res://economy/wallet.gd" id="2_wallet"]
+[ext_resource type="Script" path="res://economy/game_clock.gd" id="3_clock"]
+[ext_resource type="Script" path="res://visuals/factory_campus_visual.gd" id="4_campus"]
+[ext_resource type="Script" path="res://map/map_camera.gd" id="5_camera"]
+[ext_resource type="Script" path="res://ui/money_panel.gd" id="6_money"]
+[ext_resource type="Script" path="res://ui/speed_panel.gd" id="7_speed"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tip"]
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
+bg_color = Color(0.945, 0.922, 0.863, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.431, 0.275, 0.188, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="FactoryCampusSandbox" type="Node2D"]
+script = ExtResource("1_sandbox")
+
+[node name="Wallet" type="Node" parent="."]
+script = ExtResource("2_wallet")
+starting_money = 60000
+
+[node name="Clock" type="Node" parent="."]
+script = ExtResource("3_clock")
+
+[node name="Grass" type="Polygon2D" parent="."]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(0, 0, 5600, 0, 5600, 3600, 0, 3600)
+
+[node name="Campus" type="Node2D" parent="."]
+position = Vector2(2780, 1800)
+script = ExtResource("4_campus")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(2830, 1790)
+zoom = Vector2(2.4, 2.4)
+script = ExtResource("5_camera")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="MoneyPanel" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("6_money")
+
+[node name="SpeedPanel" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_speed")
+
+[node name="Help" type="Label" parent="UI"]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 900.0
+offset_bottom = 40.0
+theme_override_colors/font_color = Color(0.2, 0.25, 0.15, 1)
+theme_override_font_sizes/font_size = 14
+text = "Parsele tıkla: hat kur / hızlandır · Satılık parsel: yuva aç · Sarı makas: çelik payı · Yığın / saha (deneme): kamyon sıklığı"
+
+[node name="Tip" type="Label" parent="UI"]
+visible = false
+theme_override_colors/font_color = Color(0.227, 0.165, 0.141, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxFlat_tip")
