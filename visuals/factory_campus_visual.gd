@@ -2,23 +2,28 @@
 extends Node2D
 
 ## The line factory (economy/line_factory.gd, docs/hat_fabrikasi.md) as a campus on the map,
-## nothing to enter. Goods flow left to right:
-## - top: the truck lane from the gate (the road comes in on the left); input bays (iron, coal,
-##   copper piles, open to the lane, the piles grow with the stock) on the left, the output yard
-##   (steel coils, parts crates, one per few units) on the right;
-## - under them the conveyor rack, laid by the game: iron / coal / copper run from the bays to
-##   the plots that take them, steel and parts run to the output yard; moving dots show what
+## nothing to enter. The buildings, yards and ground pieces are pictures rendered straight down
+## in Blender (blender/scripts/create_campus_kit.py and render_furnace_topdown.py, copied to
+## visuals/art/); the conveyors, flowing goods, smoke, balloons and trays are drawn here, since
+## they follow the lines and the stocks. Goods flow left to right:
+## - top: the truck lane from the gate (the road comes in on the left); input bunkers (iron,
+##   coal, copper; the pile picture steps through five sizes with the stock) on the left, the
+##   office, the output yards (steel coils, parts crates, by the stock) on the right;
+## - under them the conveyor rack: iron / coal / copper run from the bunkers' draw-off hoppers to
+##   the plots that take them, steel and parts run to the output yards; moving dots show what
 ##   flows, thinner when less flows;
-## - the plots (one per open slot) under the rack: a steel line (one furnace per level, glow and
-##   smoke while it runs, two converters), a parts line (hall with a turning gear), or an empty
-##   plot with a plus; level lamps in a corner; a balloon names what stops a line (the missing
-##   good, or a full crate when the output is full);
+## - the plots (one per open slot): a steel line is the smelting furnace (glowing, smoking while
+##   it runs) fed through the hopper on its chute, pouring steel from its spout; a parts line is
+##   the sawtooth workshop (skylights lit while it runs) with its intakes and outlet on its north
+##   wall; an empty plot is surveyed gravel with a plus; level lamps in a corner; a balloon names
+##   what stops a line (the missing good, or a full crate when the output is full);
 ## - the steel switch on the steel lane before the first parts line, its ring showing the share
 ##   of steel turned to parts;
 ## - right of the fence the next plot for sale, while slots can still be opened.
-## The campus widens by one plot per opened slot. `trucks`, `hover`, `menu` and `rates` come
-## from whoever runs it (sandbox/factory_campus_sandbox.gd); without a factory (in the editor) it
-## shows a demo. Light from the top left, as on the other buildings.
+## Layers, bottom up: ground (this node), floor pictures, conveyors, buildings, what stands above
+## them, then the upright tray. The campus widens by one plot per opened slot. `trucks`, `hover`,
+## `menu` and `rates` come from whoever runs it (sandbox/factory_campus_sandbox.gd); without a
+## factory (in the editor) it shows a demo.
 
 const Painter = preload("res://visuals/mesh_painter.gd")
 const LineFactory = preload("res://economy/line_factory.gd")
@@ -33,6 +38,8 @@ const INPUT_BAYS := {"iron": Rect2(-122.0, BAY_TOP, 30.0, BAY_H), "coal": Rect2(
 	"copper": Rect2(-54.0, BAY_TOP, 30.0, BAY_H)}
 ## Conveyor rack lanes (y): inputs, then outputs
 const RACK := {"iron": -36.0, "coal": -32.0, "copper": -28.0, "steel": -24.0, "machine_parts": -20.0}
+## Depth of the rack picture (5.430 x 1.867 m)
+const RACK_H := 22.0
 const PLOT_TOP := -11.0
 const PLOT_H := 62.0
 const PLOT_W := 58.0
@@ -75,6 +82,14 @@ var time := 0.0
 
 var _paint
 var _mesh: ArrayMesh
+## Child layers over the ground: floor pictures, conveyors (mesh), buildings, what stands above
+## them (smoke, fittings, trucks, fence, balloons, hover; mesh)
+var _floor: Node2D
+var _belts: Node2D
+var _belts_mesh: ArrayMesh
+var _buildings: Node2D
+var _top: Node2D
+var _top_mesh: ArrayMesh
 ## Child layer for what stays level and screen-sized (tray, sign)
 var _upright: Node2D
 var _upright_mesh: ArrayMesh
@@ -83,10 +98,23 @@ var _upright_mesh: ArrayMesh
 func _ready() -> void:
 	if factory == null:
 		factory = _demo()
+	_floor = _layer(_draw_floor)
+	_belts = _layer(_draw_belts)
+	_buildings = _layer(_draw_buildings)
+	_top = Node2D.new()
+	_top.draw.connect(_draw_top)
+	add_child(_top)
 	_upright = Node2D.new()
 	_upright.z_index = 1
 	_upright.draw.connect(_draw_upright)
 	add_child(_upright)
+
+
+func _layer(on_draw: Callable) -> Node2D:
+	var layer := Node2D.new()
+	layer.draw.connect(on_draw)
+	add_child(layer)
+	return layer
 
 
 func _process(delta: float) -> void:
@@ -102,6 +130,9 @@ func _draw() -> void:
 	_paint_all()
 	_mesh = _paint.commit(self)
 	_paint = null
+	if _top != null:
+		for layer in [_floor, _belts, _buildings, _top]:
+			layer.queue_redraw()
 	_place_upright()
 
 
@@ -176,11 +207,16 @@ func lane_y() -> float:
 func _port_x(i: int, good: String) -> float:
 	var p := plot_rect(i)
 	var kind: String = factory.lines[i].get("kind", "")
+	if kind == "steel":
+		# Into the hopper on the furnace's feed chute; steel up the plot's east edge
+		match good:
+			"iron": return _chute_top(i).x - HOPPER_GAP
+			"coal": return _chute_top(i).x + HOPPER_GAP
+			"steel": return p.end.x - 4.0
+	# A parts line's intakes and outlet on its workshop's north wall
 	match good:
-		"iron": return p.position.x + 8.0
-		"coal": return p.position.x + 16.0
 		"copper": return p.position.x + 40.0
-		"steel": return p.position.x + (12.0 if kind == "parts" else PLOT_W - 8.0)
+		"steel": return p.position.x + 12.0
 	return p.position.x + 46.0
 
 
@@ -231,37 +267,16 @@ func target_at(point: Vector2) -> Dictionary:
 	return {}
 
 
-# --- Painting -------------------------------------------------------------------------
+# --- Ground (this node) ---------------------------------------------------------------
 
 func _paint_all() -> void:
 	if show_road:
 		_draw_road()
-	_draw_ground()
+	var campus := campus_rect()
+	_paint.rect(Rect2(campus.position + Vector2(3.0, 4.0), campus.size), Color(0.12, 0.16, 0.10, 0.25))
+	_paint.rect(campus, GROUND)
 	if has_annex():
 		_draw_annex()
-	for good in INPUT_BAYS:
-		_draw_bay(INPUT_BAYS[good], good, factory.inputs[good] / LineFactory.CAPACITY)
-	_draw_output_yard()
-	_draw_office(Rect2(-16.0, -72.0, 30.0, 22.0))
-	_draw_rack()
-	for i in factory.slots:
-		var line: Dictionary = factory.lines[i]
-		if line.is_empty():
-			_draw_empty_plot(plot_rect(i), menu.get("plot", -2) == i)
-		elif line["kind"] == "steel":
-			_draw_steel_line(i, line)
-		else:
-			_draw_parts_line(i, line)
-	_draw_switch()
-	for truck in trucks:
-		_draw_truck(Vector2(truck["x"], lane_y() + (-3.0 if truck["dir"] > 0 else 3.0)), truck["good"], truck["loaded"], truck["dir"])
-	_draw_fence()
-	for i in factory.slots:
-		var line: Dictionary = factory.lines[i]
-		if not line.is_empty() and line["status"] in ["starved", "blocked"] and line["rate"] < 0.9:
-			var bob := sin(time * 3.0 + i) * 1.2
-			_draw_balloon(plot_rect(i).position + Vector2(PLOT_W - 12.0, 9.0 + bob), line["short"] if line["status"] == "starved" else "")
-	_draw_hover()
 
 
 func _draw_road() -> void:
@@ -271,17 +286,13 @@ func _draw_road() -> void:
 		_paint.rect(Rect2(float(x), y - 0.5, 6.0, 1.0), Color("#e9e4d4"))
 
 
-func _draw_ground() -> void:
-	var campus := campus_rect()
-	_paint.rect(Rect2(campus.position + Vector2(3.0, 4.0), campus.size), Color(0.12, 0.16, 0.10, 0.25))
-	_paint.rect(campus, GROUND)
-	var lane := lane_rect()
-	_paint.rect(lane, CONCRETE)
-	_paint.rect(Rect2(lane.position.x, lane.end.y - 1.0, lane.size.x, 1.0), CONCRETE.darkened(0.2))
-	var x := lane.position.x + 8.0
-	while x < lane.end.x - 8.0:
-		_paint.rect(Rect2(x, lane_y() - 0.4, 7.0, 0.8), Color("#ece6cf"))
-		x += 14.0
+func _draw_annex() -> void:
+	var annex := annex_rect()
+	_paint.rect(annex, GRASS.darkened(0.05))
+	_dashed_rect(annex, Color("#7d6a5c"), 1.0, 3.0)
+	# Survey pegs; the for-sale sign is on the upright layer
+	for corner in [annex.position + Vector2(3, 3), Vector2(annex.end.x - 3, annex.position.y + 3), annex.end - Vector2(3, 3), Vector2(annex.position.x + 3, annex.end.y - 3)]:
+		_paint.circle(corner, 1.3, ACCENT)
 
 
 func _dashed_rect(area: Rect2, color: Color, width := 1.0, dash := 4.0) -> void:
@@ -296,87 +307,91 @@ func _dashed_rect(area: Rect2, color: Color, width := 1.0, dash := 4.0) -> void:
 			t += dash * 2.0
 
 
-# --- Yards ----------------------------------------------------------------------------
+# --- Pictures -------------------------------------------------------------------------
 
-func _draw_bay(bay: Rect2, good: String, fill: float) -> void:
-	_paint.rect(bay, CONCRETE.darkened(0.12))
-	if fill > 0.01:
-		_draw_pile(bay, GOODS[good], clampf(fill, 0.0, 1.0), bay.position.x)
-	var wall := 3.0
-	var parts := [Rect2(bay.position.x - wall, bay.position.y, wall, bay.size.y),
-		Rect2(bay.end.x, bay.position.y, wall, bay.size.y),
-		Rect2(bay.position.x - wall, bay.end.y, bay.size.x + wall * 2.0, wall)]
-	_paint.rect(Rect2(bay.end.x + wall, bay.position.y + 1.5, 2.0, bay.size.y), Color(0.1, 0.12, 0.1, 0.28))
-	for w in parts:
-		_paint.rect(w, CONCRETE)
-		_paint.rect(Rect2(w.position, Vector2(w.size.x, 1.0)), CONCRETE.lightened(0.2))
-	_paint.rect(Rect2(bay.get_center().x - 5.0, bay.end.y + 0.8, 10.0, 1.6), GOODS[good].lightened(0.15))
-	_draw_rate_pips(bay, good)
+## Campus units per metre of the Blender renders (66 units span the furnace's 5.6 m frame)
+const M := 66.0 / 5.6
+const OFFICE := Rect2(-16.0, -72.0, 30.0, 22.0)
+## Thickness of a bunker's push walls (west, east, south)
+const WALL := 3.0
+## Steps of the pile and yard pictures (1..5 full; yards also 0)
+const LEVELS := 5
+const SHADOW := Color(0.08, 0.1, 0.06, 0.32)
+
+static var _pictures := {}
 
 
-## Sandbox: how often trucks come for `good`, as pips on the bay's front wall
-func _draw_rate_pips(bay: Rect2, good: String) -> void:
-	if not rates.has(good):
+static func _pic(name: String) -> Texture2D:
+	if not _pictures.has(name):
+		_pictures[name] = load("res://visuals/art/campus/%s.png" % name)
+	return _pictures[name]
+
+
+## How many of LEVELS steps `amount` of CAPACITY fills, 0 for (nearly) none
+static func _level_of(amount: float) -> int:
+	if amount < 0.5:
+		return 0
+	return clampi(ceili(amount / LineFactory.CAPACITY * LEVELS - 0.001), 1, LEVELS)
+
+
+## A picture with its own soft shadow, shifted away from the light
+func _with_shadow(layer: CanvasItem, picture: Texture2D, area: Rect2, lift: float) -> void:
+	layer.draw_texture_rect(picture, Rect2(area.position + Vector2(0.8, 1.0) * lift, area.size), false, SHADOW)
+	layer.draw_texture_rect(picture, area, false)
+
+
+func _bay_frame(good: String) -> Rect2:
+	var bay: Rect2 = INPUT_BAYS[good]
+	return Rect2(bay.position.x - WALL, bay.position.y, bay.size.x + WALL * 2.0, bay.size.y + WALL)
+
+
+## Floor layer: lane, plot pads, bunkers with their piles, output yards, office, conveyor rack
+func _draw_floor() -> void:
+	if factory == null:
 		return
-	var pips := roundi(rates[good] / 0.5)
-	for k in pips:
-		_paint.circle(Vector2(bay.position.x + 3.0 + k * 4.0, bay.position.y + 2.5), 1.3, Color(ACCENT, 0.95))
+	var lane := lane_rect()
+	for k in factory.slots:
+		_floor.draw_texture_rect(_pic("lane_tile"), Rect2(lane.position.x + k * PLOT_STEP, lane.position.y, PLOT_STEP, LANE_H), false)
+	for i in factory.slots:
+		_floor.draw_texture_rect(_pic("plot_empty" if factory.lines[i].is_empty() else "plot_pad"), plot_rect(i), false)
+	for good in INPUT_BAYS:
+		_with_shadow(_floor, _pic("bay"), _bay_frame(good), 1.5)
+		var level := _level_of(factory.inputs[good])
+		if level > 0:
+			_floor.draw_texture_rect(_pic("pile_%s_%d" % [good, level]), INPUT_BAYS[good], false)
+	for good in LineFactory.OUTPUT_GOODS:
+		_floor.draw_texture_rect(_pic("yard_%s_%d" % [good, _level_of(factory.outputs[good])]), output_bay(good), false)
+	_with_shadow(_floor, _pic("office"), OFFICE, 2.5)
+	# The conveyor rack, one tile per plot; its troughs line up with RACK
+	for k in factory.slots:
+		_with_shadow(_floor, _pic("rack_tile"), Rect2(lane.position.x + k * PLOT_STEP, RACK["iron"] - 3.0, PLOT_STEP, RACK_H), 4.0)
 
 
-func _draw_pile(bay: Rect2, ore: Color, fill: float, salt: float) -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = int(salt * 97.0) + 4001
-	var reach := lerpf(0.3, 1.0, fill)
-	var center := Vector2(bay.get_center().x, bay.end.y - bay.size.y * 0.42 * reach - 2.0)
-	var radii := Vector2(bay.size.x * 0.44 * lerpf(0.45, 1.0, fill), bay.size.y * 0.42 * reach)
-	var outline := PackedVector2Array()
-	for i in 20:
-		var a := float(i) * TAU / 20.0
-		var p := center + Vector2(cos(a) * radii.x, sin(a) * radii.y) * (1.0 + rng.randf_range(-0.08, 0.08))
-		p.x = clampf(p.x, bay.position.x + 0.5, bay.end.x - 0.5)
-		p.y = clampf(p.y, bay.position.y + 0.5, bay.end.y - 0.5)
-		outline.append(p)
-	_paint.fan(center + Vector2(1.5, 2.0), _shift(outline, Vector2(1.5, 2.0)), ore.darkened(0.45))
-	_paint.fan(center, outline, ore.darkened(0.12))
-	_paint.ellipse(center + Vector2(-radii.x * 0.2, -radii.y * 0.22), Vector2(radii.x * 0.5, radii.y * 0.38), -0.3, ore)
-	_paint.ellipse(center + Vector2(-radii.x * 0.3, -radii.y * 0.34), Vector2(radii.x * 0.2, radii.y * 0.14), -0.3, ore.lightened(0.2))
+# --- Conveyors (mesh layer) -----------------------------------------------------------
 
-
-func _draw_output_yard() -> void:
-	var steel_bay := output_bay("steel")
-	var parts_bay := output_bay("machine_parts")
-	for bay in [steel_bay, parts_bay]:
-		_paint.rect(bay, CONCRETE.darkened(0.06))
-		_paint.rect(bay, CONCRETE.darkened(0.3), false, 0.6)
-	# One coil / crate per 200 / 15 units
-	var coils := ceili(factory.outputs["steel"] / LineFactory.CAPACITY * 15.0 - 0.01)
-	for k in coils:
-		var c := steel_bay.position + Vector2(6.0 + (k % 5) * 8.6, 6.0 + (k / 5) * 8.2)
-		_paint.circle(c + Vector2(0.8, 1.1), 3.3, Color(0, 0, 0, 0.25))
-		_paint.circle(c, 3.3, GOODS["steel"].darkened(0.15))
-		_paint.circle(c + Vector2(-0.5, -0.5), 2.4, GOODS["steel"].lightened(0.15))
-		_paint.circle(c, 1.0, GOODS["steel"].darkened(0.4))
-	var crates := ceili(factory.outputs["machine_parts"] / LineFactory.CAPACITY * 15.0 - 0.01)
-	for k in crates:
-		var p := parts_bay.position + Vector2(3.0 + (k % 5) * 8.6, 2.5 + (k / 5) * 8.2)
-		_paint.rect(Rect2(p + Vector2(0.8, 1.1), Vector2(6.4, 6.4)), Color(0, 0, 0, 0.25))
-		_paint.rect(Rect2(p, Vector2(6.4, 6.4)), Color("#a8794a"))
-		_paint.rect(Rect2(p + Vector2(0.9, 0.9), Vector2(4.6, 4.6)), Color("#c49a62"))
-		_draw_gear(p + Vector2(3.2, 3.2), 1.6, GOODS["machine_parts"].darkened(0.25), 0.0)
+func _draw_belts() -> void:
+	if factory == null:
+		return
+	_paint = Painter.new()
+	_draw_rack()
+	for i in factory.slots:
+		var line: Dictionary = factory.lines[i]
+		if line.is_empty():
+			_draw_plus(plot_rect(i), menu.get("plot", -2) == i)
+			continue
+		if line["kind"] == "steel":
+			_draw_furnace_belts(i, line["rate"])
+		else:
+			_draw_workshop_belts(i, line["rate"])
+		_level_lamps(plot_rect(i), line["level"])
+	_draw_switch()
+	for good in INPUT_BAYS:
+		_draw_rate_pips(INPUT_BAYS[good], good)
 	for good in LineFactory.OUTPUT_GOODS:
 		_draw_rate_pips(output_bay(good), good)
+	_belts_mesh = _paint.commit(_belts)
+	_paint = null
 
-
-func _draw_office(area: Rect2) -> void:
-	_paint.rect(Rect2(area.position + Vector2(2.0, 2.5), area.size), Color(0, 0, 0, 0.25))
-	_paint.rect(area, Color("#d8d2c4"))
-	_paint.rect(Rect2(area.position, Vector2(area.size.x, area.size.y * 0.5)), Color("#e6e1d5"))
-	for i in 4:
-		_paint.rect(Rect2(area.position + Vector2(3.0 + i * 6.8, area.size.y - 7.0), Vector2(4.6, 3.6)), Color("#6f8fa3"))
-	_paint.rect(area, Color("#8a8070"), false, 0.6)
-
-
-# --- Conveyors ------------------------------------------------------------------------
 
 ## A belt from `a` to `b` with dots moving from a to b; `flow` 0..1 sets how dense they are
 ## (none below a trickle)
@@ -412,26 +427,19 @@ func _output_flow(good: String) -> float:
 
 
 func _draw_rack() -> void:
-	var bed := Rect2(LEFT + 6.0, RACK["iron"] - 3.0, right_edge() - LEFT - 12.0, RACK["machine_parts"] - RACK["iron"] + 6.0)
-	_paint.rect(Rect2(bed.position + Vector2(1.5, 2.0), bed.size), Color(0, 0, 0, 0.18))
-	_paint.rect(bed, Color(STEEL, 0.35))
-	var x := bed.position.x + 4.0
-	while x < bed.end.x:
-		_paint.rect(Rect2(x - 0.6, bed.position.y, 1.2, bed.size.y), Color(STEEL.darkened(0.2), 0.6))
-		x += 12.0
-	# Inputs: down from each bay, then right to the last plot that takes it
+	# The rack itself is a picture on the floor layer. Inputs: from each bunker's draw-off hopper down, then right to the last plot that takes it
 	for good in ["iron", "coal", "copper"]:
 		var users: Array[int] = _plots_of("parts" if good == "copper" else "steel")
 		if users.is_empty():
 			continue
 		var bx: float = INPUT_BAYS[good].get_center().x
 		var flow := _input_flow(good)
-		_belt(Vector2(bx, BAY_TOP + BAY_H + 3.0), Vector2(bx, RACK[good]), good, flow)
+		_belt(Vector2(bx, BAY_TOP + BAY_H + 1.0), Vector2(bx, RACK[good]), good, flow)
 		var far := bx
 		for i in users:
 			far = maxf(far, _port_x(i, good))
 		_belt(Vector2(bx, RACK[good]), Vector2(far, RACK[good]), good, flow)
-	# Outputs: along their lane towards their bay, from both sides, then up into it
+	# Outputs: along their lane towards their yard, from both sides, then up into it
 	for good in ["steel", "machine_parts"]:
 		var makers: Array[int] = _plots_of("steel" if good == "steel" else "parts")
 		if makers.is_empty():
@@ -449,7 +457,7 @@ func _draw_rack() -> void:
 			_belt(Vector2(lo, RACK[good]), Vector2(bx, RACK[good]), good, flow)
 		if hi > bx:
 			_belt(Vector2(hi, RACK[good]), Vector2(bx, RACK[good]), good, flow)
-		_belt(Vector2(bx, RACK[good]), Vector2(bx, BAY_TOP + BAY_H + 3.0), good, flow)
+		_belt(Vector2(bx, RACK[good]), Vector2(bx, BAY_TOP + BAY_H - 3.0), good, flow)
 
 
 func _draw_switch() -> void:
@@ -476,11 +484,13 @@ func _shift(points: PackedVector2Array, by: Vector2) -> PackedVector2Array:
 	return out
 
 
-# --- Plots ----------------------------------------------------------------------------
-
-func _plot_ground(plot: Rect2) -> void:
-	_paint.rect(plot, GROUND.darkened(0.06))
-	_paint.rect(plot, GROUND.darkened(0.22), false, 0.6)
+## Sandbox: how often trucks come for `good`, as pips along the bay's lane side
+func _draw_rate_pips(bay: Rect2, good: String) -> void:
+	if not rates.has(good):
+		return
+	var pips := roundi(rates[good] / 0.5)
+	for k in pips:
+		_paint.circle(Vector2(bay.position.x + 3.0 + k * 4.0, bay.position.y + 2.5), 1.3, Color(ACCENT, 0.95))
 
 
 func _level_lamps(plot: Rect2, level: int) -> void:
@@ -490,89 +500,8 @@ func _level_lamps(plot: Rect2, level: int) -> void:
 		_paint.circle(c, 1.3, Color("#ffd257") if k < level else Color("#7a6a5c"))
 
 
-func _draw_steel_line(i: int, line: Dictionary) -> void:
-	var plot := plot_rect(i)
-	var rate: float = line["rate"]
-	_plot_ground(plot)
-	for good in ["iron", "coal"]:
-		var x := _port_x(i, good)
-		_belt(Vector2(x, RACK[good]), Vector2(x, plot.position.y + 8.0), good, rate)
-	var sx := _port_x(i, "steel")
-	_belt(Vector2(sx, plot.position.y + 10.0), Vector2(sx, RACK["steel"]), "steel", rate)
-	for k in line["level"]:
-		_draw_furnace(plot.position + Vector2(14.0 + k * 13.0, 22.0 + (k % 2) * 4.0), rate, i * 3 + k)
-	_paint.line(plot.position + Vector2(8.0, 38.0), plot.position + Vector2(50.0, 38.0), STEEL.darkened(0.3), 1.0)
-	_draw_converter(plot.position + Vector2(18.0, 49.0), rate)
-	_draw_converter(plot.position + Vector2(36.0, 49.0), rate)
-	_level_lamps(plot, line["level"])
-
-
-func _draw_furnace(c: Vector2, rate: float, salt: int) -> void:
-	_paint.circle(c + Vector2(2.0, 2.6), 9.0, Color(0, 0, 0, 0.3))
-	_paint.circle(c, 9.0, Color("#6b5a52"))
-	_paint.circle(c + Vector2(-1.0, -1.0), 7.4, Color("#8a766b"))
-	_paint.circle(c, 4.4, Color("#3d3330"))
-	if rate > 0.05:
-		var flicker := 0.85 + 0.15 * sin(time * 9.0 + salt)
-		_paint.circle(c, 3.2 * clampf(rate, 0.4, 1.0), Color("#ff9a3c").lerp(Color("#3d3330"), 1.0 - rate * flicker))
-		_paint.circle(c, 1.7 * clampf(rate, 0.4, 1.0), Color("#ffe08a").lerp(Color("#3d3330"), 1.0 - rate * flicker))
-	var stack := c + Vector2(6.5, -8.5)
-	_paint.rect(Rect2(stack + Vector2(-2.0, -2.0), Vector2(4.0, 4.0)), Color("#4a4240"))
-	if rate > 0.05:
-		for k in 5:
-			var p := fmod(time * 0.45 + k * 0.2 + salt * 0.13, 1.0)
-			var at := stack + Vector2(2.0 + p * 15.0 + sin(time + k) * 0.8, -2.0 - p * 13.0)
-			_paint.circle(at, 1.6 + p * 3.2, Color(0.93, 0.93, 0.9, (1.0 - p) * 0.6 * clampf(rate * 1.6, 0.0, 1.0)))
-
-
-func _draw_converter(c: Vector2, rate: float) -> void:
-	_paint.circle(c + Vector2(1.4, 2.0), 6.0, Color(0, 0, 0, 0.28))
-	_paint.circle(c, 6.0, Color("#56656b"))
-	_paint.circle(c + Vector2(-0.8, -0.8), 4.6, Color("#74858b"))
-	_paint.circle(c, 2.2, Color("#2f3538").lerp(Color("#ff9a3c"), clampf(rate, 0.0, 1.0) * 0.6))
-	_paint.rect(Rect2(c + Vector2(-8.0, -0.8), Vector2(16.0, 1.6)), STEEL.darkened(0.3))
-
-
-func _draw_parts_line(i: int, line: Dictionary) -> void:
-	var plot := plot_rect(i)
-	var rate: float = line["rate"]
-	_plot_ground(plot)
-	var cx := _port_x(i, "copper")
-	_belt(Vector2(cx, RACK["copper"]), Vector2(cx, plot.position.y + 8.0), "copper", rate)
-	var sx := _port_x(i, "steel")
-	_belt(Vector2(sx, RACK["steel"]), Vector2(sx, plot.position.y + 8.0), "steel", rate)
-	var px := _port_x(i, "machine_parts")
-	_belt(Vector2(px, plot.position.y + 10.0), Vector2(px, RACK["machine_parts"]), "machine_parts", rate)
-	var hall := Rect2(plot.position + Vector2(6.0, 14.0), Vector2(46.0, 40.0))
-	_paint.rect(Rect2(hall.position + Vector2(2.5, 3.0), hall.size), Color(0, 0, 0, 0.3))
-	_paint.rect(hall, Color("#9aa3a6"))
-	for k in 5:
-		var y := hall.position.y + k * 8.0
-		_paint.rect(Rect2(hall.position.x, y, hall.size.x, 4.6), Color("#b5bec1"))
-		_paint.rect(Rect2(hall.position.x, y + 4.6, hall.size.x, 1.3), Color("#7fa6c0"))
-	# Extra roof bays per level
-	for k in line["level"] - 1:
-		_paint.rect(Rect2(hall.end.x - 10.0 - k * 9.0, hall.end.y - 9.0, 7.0, 7.0), Color("#c49a62"))
-	_paint.rect(hall, Color("#6f787b"), false, 0.7)
-	var c := hall.get_center() + Vector2(0.0, -2.0)
-	_paint.circle(c + Vector2(0.8, 1.0), 7.0, Color(0, 0, 0, 0.25))
-	_draw_gear(c, 6.0, GOODS["machine_parts"], time * 1.4 * rate)
-	_paint.circle(c, 2.2, Color("#9aa3a6"))
-	_level_lamps(plot, line["level"])
-
-
-func _draw_gear(c: Vector2, r: float, color: Color, turn: float) -> void:
-	for k in 8:
-		var a := float(k) * TAU / 8.0 + turn
-		_paint.circle(c + Vector2(cos(a), sin(a)) * r * 0.95, r * 0.28, color)
-	_paint.circle(c, r * 0.8, color)
-
-
-func _draw_empty_plot(plot: Rect2, tray_open: bool) -> void:
-	_paint.rect(plot, GROUND.lightened(0.06))
-	_dashed_rect(plot.grow(-2.0), Color("#f4efe2"), 1.0, 3.5)
-	for corner in [plot.position + Vector2(4, 4), Vector2(plot.end.x - 4, plot.position.y + 4), plot.end - Vector2(4, 4), Vector2(plot.position.x + 4, plot.end.y - 4)]:
-		_paint.circle(corner, 1.3, ACCENT)
+## An empty plot's "build here" sign
+func _draw_plus(plot: Rect2, tray_open: bool) -> void:
 	if tray_open:
 		return
 	var c := plot.get_center() + Vector2(0.0, 6.0)
@@ -583,13 +512,144 @@ func _draw_empty_plot(plot: Rect2, tray_open: bool) -> void:
 	_paint.rect(Rect2(c + Vector2(-1.3, -5.5), Vector2(2.6, 11.0)), OK)
 
 
-func _draw_annex() -> void:
-	var annex := annex_rect()
-	_paint.rect(annex, GRASS.darkened(0.05))
-	_dashed_rect(annex, Color("#7d6a5c"), 1.0, 3.0)
-	# Survey pegs; the for-sale sign is on the upright layer
-	for corner in [annex.position + Vector2(3, 3), Vector2(annex.end.x - 3, annex.position.y + 3), annex.end - Vector2(3, 3), Vector2(annex.position.x + 3, annex.end.y - 3)]:
-		_paint.circle(corner, 1.3, ACCENT)
+# --- Buildings (picture layer) --------------------------------------------------------
+
+const FURNACE_HOT := preload("res://visuals/art/furnace_top.png")
+const FURNACE_COLD := preload("res://visuals/art/furnace_top_cold.png")
+## Campus units the furnace picture spans (its 5.6 m frame), where its chimney, feed chute end
+## (north) and tap spout (south) are, in metres from its centre (the image's y runs south)
+const FURNACE_SIZE := 66.0
+const CHIMNEY_M := Vector2(1.46, -0.24)
+const CHUTE_TOP_M := Vector2(-0.05, -1.90)
+const SPOUT_M := Vector2(-0.05, 1.86)
+## The hopper the iron and coal belts drop into, on the chute's end
+const HOPPER_GAP := 2.4
+const HOPPER_H := 5.0
+## The parts workshop's picture over its plot; its intakes and outlet on the north wall line up
+## with _port_x, at HALL_PORT_Y down the plot
+const HALL := Rect2(6.0, 14.0, 46.0, 40.0)
+const HALL_PORT_Y := 15.0
+
+
+func _furnace_rect(i: int) -> Rect2:
+	var c := plot_rect(i).get_center() + Vector2(0.0, 1.0)
+	return Rect2(c - Vector2.ONE * FURNACE_SIZE * 0.5, Vector2.ONE * FURNACE_SIZE)
+
+
+func _chute_top(i: int) -> Vector2:
+	return _furnace_rect(i).get_center() + CHUTE_TOP_M * M
+
+
+func _spout(i: int) -> Vector2:
+	return _furnace_rect(i).get_center() + SPOUT_M * M
+
+
+func _hall_rect(i: int) -> Rect2:
+	return Rect2(plot_rect(i).position + HALL.position, HALL.size)
+
+
+## Iron and coal down into the furnace's hopper; steel out of the tap spout, along the plot's
+## south side and up its east edge to the steel lane
+func _draw_furnace_belts(i: int, rate: float) -> void:
+	for good in ["iron", "coal"]:
+		var x := _port_x(i, good)
+		_belt(Vector2(x, RACK[good]), Vector2(x, _chute_top(i).y - HOPPER_H), good, rate)
+	var plot := plot_rect(i)
+	var spout := _spout(i)
+	var y := minf(spout.y + 3.5, plot.end.y - 3.5)
+	var x := _port_x(i, "steel")
+	_belt(spout, Vector2(spout.x, y), "steel", rate)
+	_belt(Vector2(spout.x, y), Vector2(x, y), "steel", rate)
+	_belt(Vector2(x, y), Vector2(x, RACK["steel"]), "steel", rate)
+
+
+## Steel (from the switch) and copper into the workshop's intakes, parts out of its outlet
+func _draw_workshop_belts(i: int, rate: float) -> void:
+	var y := plot_rect(i).position.y + HALL_PORT_Y
+	for good in ["copper", "steel"]:
+		var x := _port_x(i, good)
+		_belt(Vector2(x, RACK[good]), Vector2(x, y), good, rate)
+	var px := _port_x(i, "machine_parts")
+	_belt(Vector2(px, y), Vector2(px, RACK["machine_parts"]), "machine_parts", rate)
+
+
+## Cold picture under the hot one, the hot one as strong as the line runs (with a flicker); the
+## workshop dark or lit the same way
+func _draw_buildings() -> void:
+	if factory == null:
+		return
+	for i in factory.slots:
+		var line: Dictionary = factory.lines[i]
+		if line.is_empty():
+			continue
+		var rate: float = line["rate"]
+		if line["kind"] == "steel":
+			var area := _furnace_rect(i)
+			_with_shadow(_buildings, FURNACE_COLD, area, 2.8)
+			if rate > 0.02:
+				var flicker := 0.9 + 0.1 * sin(time * 9.0 + i * 1.7)
+				_buildings.draw_texture_rect(FURNACE_HOT, area, false, Color(1, 1, 1, clampf(rate * 1.2, 0.0, 1.0) * flicker))
+		else:
+			var area := _hall_rect(i)
+			_with_shadow(_buildings, _pic("parts_hall_off"), area, 3.5)
+			if rate > 0.02:
+				_buildings.draw_texture_rect(_pic("parts_hall_on"), area, false, Color(1, 1, 1, clampf(rate * 1.2, 0.0, 1.0)))
+
+
+## Over the furnace picture: the hopper where iron and coal fall into the chute, and the catch
+## pan under the spout, glowing while steel pours
+func _furnace_fittings(i: int, rate: float) -> void:
+	var top := _chute_top(i)
+	var hopper := PackedVector2Array([top + Vector2(-HOPPER_GAP - 2.6, -HOPPER_H - 0.6), top + Vector2(HOPPER_GAP + 2.6, -HOPPER_H - 0.6),
+		top + Vector2(2.2, 0.8), top + Vector2(-2.2, 0.8)])
+	_paint.polygon(_shift(hopper, Vector2(0.8, 1.1)), Color(0, 0, 0, 0.3))
+	_paint.polygon(hopper, Color("#56656b"))
+	_paint.polygon(PackedVector2Array([hopper[0] + Vector2(1.0, 0.8), hopper[1] + Vector2(-1.0, 0.8),
+		top + Vector2(1.2, -0.6), top + Vector2(-1.2, -0.6)]), Color("#2f3538"))
+	_paint.line(hopper[0], hopper[1], Color("#8a9aa0"), 0.8)
+	# Ore falling in, in the two colours
+	if rate > 0.05:
+		var p := fmod(time * 2.0 + i * 0.3, 1.0)
+		_paint.circle(top + Vector2(-1.0, -HOPPER_H * (1.0 - p)), 0.9, GOODS["iron"])
+		_paint.circle(top + Vector2(1.0, -HOPPER_H * fmod(1.5 - p, 1.0)), 0.9, GOODS["coal"])
+	var spout := _spout(i)
+	var pan := Rect2(spout + Vector2(-3.2, -0.6), Vector2(6.4, 3.6))
+	_paint.rect(Rect2(pan.position + Vector2(0.6, 0.9), pan.size), Color(0, 0, 0, 0.3))
+	_paint.rect(pan, Color("#4a4240"))
+	_paint.rect(pan.grow(-0.9), Color("#2f2a28").lerp(Color("#ff9a3c"), clampf(rate, 0.0, 1.0) * 0.85))
+
+
+func _furnace_smoke(i: int, rate: float) -> void:
+	if rate <= 0.05:
+		return
+	var stack := _furnace_rect(i).get_center() + CHIMNEY_M * M
+	for k in 5:
+		var p := fmod(time * 0.45 + k * 0.2 + i * 0.37, 1.0)
+		var at := stack + Vector2(2.0 + p * 16.0 + sin(time + k) * 0.8, -1.0 - p * 14.0)
+		_paint.circle(at, 2.0 + p * 3.6, Color(0.93, 0.93, 0.9, (1.0 - p) * 0.55 * clampf(rate * 1.6, 0.0, 1.0)))
+
+
+## What stands above the buildings: furnace fittings and smoke, trucks, fence, balloons, hover
+func _draw_top() -> void:
+	if factory == null:
+		return
+	_paint = Painter.new()
+	for i in factory.slots:
+		var line: Dictionary = factory.lines[i]
+		if line.get("kind", "") == "steel":
+			_furnace_fittings(i, line["rate"])
+			_furnace_smoke(i, line["rate"])
+	for truck in trucks:
+		_draw_truck(Vector2(truck["x"], lane_y() + (-3.0 if truck["dir"] > 0 else 3.0)), truck["good"], truck["loaded"], truck["dir"])
+	_draw_fence()
+	for i in factory.slots:
+		var line: Dictionary = factory.lines[i]
+		if not line.is_empty() and line["status"] in ["starved", "blocked"] and line["rate"] < 0.9:
+			var bob := sin(time * 3.0 + i) * 1.2
+			_draw_balloon(plot_rect(i).position + Vector2(PLOT_W - 12.0, 9.0 + bob), line["short"] if line["status"] == "starved" else "")
+	_draw_hover()
+	_top_mesh = _paint.commit(_top)
+	_paint = null
 
 
 # --- Trucks, fence, balloons, hover, menu ------------------------------------------------
@@ -772,3 +832,10 @@ static func _thousands(amount: int) -> String:
 		out = "." + digits.right(3) + out
 		digits = digits.left(digits.length() - 3)
 	return digits + out
+
+
+func _draw_gear(c: Vector2, r: float, color: Color, turn: float) -> void:
+	for k in 8:
+		var a := float(k) * TAU / 8.0 + turn
+		_paint.circle(c + Vector2(cos(a), sin(a)) * r * 0.95, r * 0.28, color)
+	_paint.circle(c, r * 0.8, color)

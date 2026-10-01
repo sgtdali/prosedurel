@@ -66,6 +66,25 @@ fabrika görseli, ilgili testler) silindi.
   çeliği yalnız kendi yerleşkesinin çelik hatlarından alır. Haritadaki kamyonlar kapıda durur, yerleşkenin
   içindeki şeritte görünmez.
 
+## Görseller: Blender (2026-10-01)
+
+Yerleşkenin binaları ve zemin parçaları Blender'da modellenip tam yukarıdan render edilir (güneş sol üstten,
+şeffaf arka plan); oyun bunları yerleşkenin düzenine göre yerleştirir. Ölçek: 1 m = 11,79 birim (fırının
+5,6 m'lik karesi 66 birim).
+
+- Fırın: `blender/scripts/render_furnace_topdown.py` → `visuals/art/furnace_top.png` (kızgın), `furnace_top_cold.png`.
+- Kit: `blender/scripts/create_campus_kit.py` → `visuals/art/campus/`: kamyon şeridi parçası, parsel zemini (dolu /
+  boş), bunker, 3 cevher × 5 doluluk yığını, 2 çıkış sahası × 6 doluluk (0–5), ofis, parça atölyesi (çalışıyor /
+  duruyor). Betiğin başındaki ölçüler `factory_campus_visual.gd` düzeniyle eşleşmeli.
+- Bant rafı da Blender parçası (`rack_tile`, parsel başına bir tane; olukları RACK şeritleriyle hizalı).
+- Kodla kalanlar: raftaki bantlar ve akan noktalar (hatlara göre değişir), duman, fırının hazne ve döküm tavası, makas,
+  seviye lambaları, balonlar, tepsi, çit, sandbox kamyonları.
+- Katmanlar: zemin → Blender zemin resimleri → bantlar → Blender binaları (sönük/kızgın ya da karanlık/ışıklı resim,
+  hat hızına göre karışır) → üstte kalanlar → dik tepsi.
+- Bantlar modellerin gerçek giriş/çıkış noktalarına bağlanır: fırında besleme oluğunun ucu ve döküm ağzı, atölyede
+  kuzey duvardaki iki giriş ve bir çıkış, bunkerde güney duvardaki boşaltma hunisi.
+- Model değişince: Blender betiğini çalıştır, PNG'leri `visuals/art/` altına kopyala.
+
 ## Bakılacaklar
 
 - Kararlar ilginç mi: hangi hat, kaç yuva, hızlandırma mı yeni yuva mı, paylaştırma oranı?
