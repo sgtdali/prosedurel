@@ -1,6 +1,7 @@
 extends SceneTree
 
-const FactoryState = preload("res://factory/factory_state.gd")
+const LineFactory = preload("res://economy/line_factory.gd")
+const CampusActions = preload("res://ui/campus_actions.gd")
 const Hauling = preload("res://economy/hauling.gd")
 var failed := false
 var map: Node
@@ -22,35 +23,36 @@ func run() -> void:
 	var wallet = map.get_node("Wallet")
 	var hauling = map.get_node("Hauling")
 	var roads
-	check(not demand.can_build("parts_assembler"), "assembler locked before threshold")
-	var state := parts_factory()
-	var record := {"name": "Parça fabrikası", "state": state}
-	var view = map.get_node("FactoryView")
-	view.open(record)
-	view.interior.select_tool("parts_assembler")
-	check(view.interior.tool == "", "keyboard/API selection cannot bypass lock")
-	check(view.interior.build_bar.buttons["parts_assembler"].disabled, "locked button disabled")
-	view.close()
+	# The parts line is locked on a factory's tray until the population unlock
+	wallet.money = 100000
+	var factory := LineFactory.new()
+	factory.wallet = wallet
+	check(not demand.can_build("parts"), "parts line locked before threshold")
+	var tray := CampusActions.plot_menu(factory, 1, demand.can_build("parts"))
+	check(not CampusActions.choose(factory, tray, "parts", func() -> bool: return false) and factory.lines[1].is_empty(), "locked parts line built")
 	# Raise population through actual town growth.
 	var town: Dictionary = cities.towns[0]
 	cities.grow(town, 12)
 	demand.refresh_progression()
-	check(demand.can_build("parts_assembler") and demand.required_goods(town).has("machine_parts"), "population unlock and local demand")
-	# Goods arrive through the truck unloading API, then belts, recipe and output gate.
-	var input_truck := Hauling.Truck.new()
-	input_truck.dropoff = {"state": state}
-	input_truck.ore = "steel"
-	input_truck.amount = 20
-	check(hauling._unload(input_truck) and state.layout.in_amount("steel") == 20, "steel delivered to assembly gate")
-	input_truck.ore = "copper"
-	input_truck.amount = 20
-	check(hauling._unload(input_truck) and state.layout.in_amount("copper") == 20, "copper delivered to assembly gate")
-	for i in 3000:
-		state.advance(0.05)
-	check(state.layout.out_stock.get("machine_parts", 0) == 20, "steel+copper -> 20 parts through real belts and output gate")
+	check(demand.can_build("parts") and demand.required_goods(town).has("machine_parts"), "population unlock and local demand")
+	check(CampusActions.choose(factory, CampusActions.plot_menu(factory, 1, demand.can_build("parts")), "parts", func() -> bool: return false), "parts line not built after unlock")
+	check(factory.build(0, "steel"), "steel line")
+	factory.parts_share = 1.0
+	# Ore arrives through the truck unloading API, then the steel and parts lines.
+	var record := {"factory": factory}
+	for ore in ["iron", "coal", "copper"]:
+		var input_truck := Hauling.Truck.new()
+		input_truck.dropoff = record
+		input_truck.ore = ore
+		input_truck.amount = 20
+		check(hauling._unload(input_truck) and factory.in_amount(ore) == 20, ore + " delivered to the factory pile")
+	for i in 600:
+		factory.advance(0.1)
+	check(factory.ready_amount("machine_parts") >= 9, "iron+coal -> steel -> parts: %d" % factory.ready_amount("machine_parts"))
+	factory.outputs = {"steel": 0.0, "machine_parts": 20.0}
 	var sales := {"kind": "sales", "town": town, "center": town["center"]}
 	var truck := Hauling.Truck.new()
-	truck.pickup = {"state": state}
+	truck.pickup = record
 	truck.dropoff = sales
 	var money: int = wallet.money
 	check(hauling._load_from_factory(truck) and truck.ore == "machine_parts" and truck.amount == 20, "parts loaded for town")
@@ -59,12 +61,12 @@ func run() -> void:
 	var excess: Dictionary = demand.sell(town, "machine_parts", 5)
 	check(excess["money"] == 2 * 600 + 3 * 150, "parts excess sells at 25 percent")
 	# Multi-good pickup prioritizes the town's weakest need, not dictionary order.
-	state.layout.out_stock = {"machine_parts": 20, "steel": 20}
+	factory.outputs = {"machine_parts": 20.0, "steel": 20.0}
 	check(hauling._load_from_factory(truck) and truck.ore == "steel", "pickup prefers missing steel over satisfied parts")
 	hauling._unload(truck)
 	# Every owned truck costs the same, including idle or unassigned ones.
 	hauling.trucks.append(truck)
-	hauling.trucks.append(input_truck)
+	hauling.trucks.append(Hauling.Truck.new())
 	wallet.money = 10
 	clock.day_passed.emit(1, 2, 2)
 	check(wallet.money == 10, "no upkeep on ordinary days")
@@ -114,46 +116,24 @@ func run() -> void:
 	roads.refresh()
 	road_root.queue_free()
 	map.get_node("Wallet").earn(50000 - map.get_node("Wallet").money)
-	# Production time must match the clock at 4x on a 20 fps machine.
-	var timing := FactoryState.new()
+	# Production follows game time at 4x on a 20 fps machine, and stops while paused.
+	var timing := LineFactory.new(100000)
+	timing.build(0, "steel")
+	timing.deliver("iron", 200.0)
+	timing.deliver("coal", 200.0)
 	for i in 200:
 		timing.advance(0.2)
-	check(absf(timing.flow.elapsed - 40.0) < 0.02, "4x factory time at 20fps")
-	var paused := timing.flow.elapsed
+	check(absf(timing.outputs["steel"] - 20.0) < 0.3, "4x factory time at 20fps: %.2f" % timing.outputs["steel"])
+	var paused: float = timing.outputs["steel"]
 	timing.advance(0.0)
-	check(timing.flow.elapsed == paused, "paused factory stays paused")
+	check(timing.outputs["steel"] == paused, "paused factory stays paused")
 	if OS.get_cmdline_user_args().size() > 0:
-		await screenshots(town, state, view)
+		await screenshots(town)
 	if not failed:
 		print("PROGRESSION_ECONOMY_OK")
 	quit(1 if failed else 0)
 
-func parts_factory() -> FactoryState:
-	var state := FactoryState.new()
-	state.layout.set_in_good(0, "steel")
-	state.layout.set_in_good(1, "copper")
-	state.machines.place("parts_assembler", Vector2i(8, 6), 0)
-	for path in [[Vector2i(0, 6), Vector2i(7, 6)],
-		[Vector2i(0, 12), Vector2i(5, 12), Vector2i(5, 8), Vector2i(7, 8)],
-		[Vector2i(11, 7), Vector2i(20, 7), Vector2i(20, 12), Vector2i(39, 12)]]:
-		lay(state.grid, path)
-	for port in state.machines.ports(0):
-		check(state.machines.connected(port), "assembler port connected: " + port["good"])
-	return state
-
-func lay(grid, corners: Array) -> void:
-	var dir := Vector2i.RIGHT
-	for i in corners.size() - 1:
-		var from: Vector2i = corners[i]
-		var to: Vector2i = corners[i + 1]
-		dir = Vector2i(signi(to.x - from.x), signi(to.y - from.y))
-		var cell := from
-		while cell != to:
-			grid.set_belt(cell, dir)
-			cell += dir
-	grid.set_belt(corners.back(), dir)
-
-func screenshots(town: Dictionary, state: FactoryState, view: Node) -> void:
+func screenshots(town: Dictionary) -> void:
 	var out: String = OS.get_cmdline_user_args()[0]
 	map.get_node("Hauling")._popups.clear()
 	await create_timer(2.0).timeout
@@ -170,17 +150,7 @@ func screenshots(town: Dictionary, state: FactoryState, view: Node) -> void:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(out + "/progression_town.png")
-	view.open({"name": "Parça fabrikası", "state": state})
-	view.interior.camera.target = Vector2(11, 8)
-	view.interior.camera.size = 16
-	view.interior.build_bar._catalog.show()
-	for viewport in view.interior.build_bar._thumbnails:
-		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
-	for i in 8:
-		await process_frame
-	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png(out + "/progression_factory.png")
-	view.close()
+
 
 func check(ok: bool, message: String) -> void:
 	if not ok:

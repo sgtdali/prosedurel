@@ -50,7 +50,7 @@
 [ext_resource type="Script" path="res://economy/mining.gd" id="mining_script"]
 [ext_resource type="Script" path="res://economy/hauling.gd" id="hauling_script"]
 [ext_resource type="Script" path="res://economy/factories.gd" id="factories_script"]
-[ext_resource type="Script" path="res://ui/factory_view.gd" id="factory_view_script"]
+[ext_resource type="Script" path="res://ui/campus_panel.gd" id="campus_panel_script"]
 [ext_resource type="Script" path="res://ui/depot_panel.gd" id="depot_panel_script"]
 [ext_resource type="Script" path="res://ui/building_panel.gd" id="building_panel_script"]
 [ext_resource type="Script" path="res://ui/date_panel.gd" id="date_panel_script"]
@@ -506,9 +506,6 @@ script = ExtResource("wallet_script")
 [node name="Clock" type="Node" parent="."]
 script = ExtResource("clock_script")
 
-[node name="FactoryView" type="CanvasLayer" parent="."]
-script = ExtResource("factory_view_script")
-
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1093841680]
 layer = 2
 
@@ -556,6 +553,16 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("building_panel_script")
+
+[node name="CampusPanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("campus_panel_script")
 
 [node name="SpeedPanel" type="Control" parent="HUD"]
 layout_mode = 3

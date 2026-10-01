@@ -83,7 +83,7 @@ func _build() -> void:
 	if not _check(facility["marker"].connected, "factory gate not on a road"):
 		return
 	_check(money_before - wallet.money == placer.COSTS["factory"], "factory price")
-	_build_inside(facility["state"])
+	_check(facility["factory"].build(0, "steel"), "steel line not built on the campus")
 	# Sales depot in the zone of the nearest town the facility can reach by road.
 	var town: Dictionary = {}
 	for candidate in cities.towns:
@@ -211,23 +211,23 @@ func _haul() -> void:
 			root.get_texture().get_image().save_png(args[0])
 		if sales.get("sold", 0) > 0 and carried.size() == 2:
 			break
-	var gates = facility["state"].layout
+	var gates = facility["factory"]
 	if sales.get("sold", 0) == 0:
 		for record in [depot, yard_record, facility, sales]:
 			print("  ", record["name"], " entry ", record["entry"], " connected ", record["marker"].connected,
 				" stops ", traffic.stops_near(record["entry"]).size(), " line to yard ", traffic.route_line(record["entry"], yard_record["entry"]).size())
 	if not _check(sales.get("sold", 0) > 0 and wallet.money > money_before,
-			"no steel sold: ore trucks %s %s, steel truck %s, gates %s out %s" % [first.state, second.state, third.state, gates.in_stock, gates.out_stock]):
+			"no steel sold: ore trucks %s %s, steel truck %s, gates %s out %s" % [first.state, second.state, third.state, gates.inputs, gates.outputs]):
 		return
 	_check(carried.size() == 2, "both ore trucks should have carried ore")
 	var sold_money: int = wallet.money - money_before
-	# The badge shows the factory at work
-	_check(facility["badge"].working or facility["state"].flow.shipped.get("steel", 0) > 0, "badge never showed work")
+	# The campus moved along with the factory's time
+	_check(facility["visual"].campus.time > 0.0 and facility["factory"].lines[0]["status"] != "idle", "the campus never ran")
 	# Meters and the detail layer (Tab)
 	var now: float = hauling.game_time()
 	_check(ore_route.meter.per_day(now) > 0.0 and steel_route.meter.per_day(now) > 0.0, "route meters: %.2f %.2f" % [ore_route.meter.per_day(now), steel_route.meter.per_day(now)])
-	var inside = facility["state"]
-	_check(inside.layout.consumed.has("iron") and inside.layout.produced.has("steel") and inside.layout.produced["steel"].per_day(inside.flow.elapsed) > 0.0, "factory meters")
+	var inside = facility["factory"]
+	_check(inside.used.get("iron", 0.0) > 0.0 or inside.made.get("steel", 0.0) > 0.0, "factory flows")
 	_check(mining.mines.any(func(m: Dictionary) -> bool: return m["meter"].per_day(mining.now()) > 0.0), "no mine meter moved")
 	var overlay: Node2D = map.get_node("MapOverlay")
 	var key := InputEventKey.new()
@@ -267,40 +267,7 @@ func _haul() -> void:
 	_check(hauling.sell_truck(second) and wallet.money == money_home + hauling.TRUCK_COST / 2 and hauling.trucks_of(depot).size() == 2, "truck not sold")
 	_check(not hauling.sell_truck(first), "a truck on a route was sold")
 	_check(placer.refund_of(depot) == placer.COSTS["depot"] / 2 + 2 * hauling.TRUCK_COST / 2, "depot refund %d" % placer.refund_of(depot))
-	print("HAULING_OK sold=", sales["sold"], " money +", sold_money, " gates=", gates.in_stock, " out=", gates.out_stock)
-
-
-## The factory's inside, set up on its data: iron at gate 1 (row 6) and coal at gates 2 (row 12)
-## and 3 (row 17); a furnace fed iron and coal, a converter fed its pig iron and coal, steel
-## out through the east gate at row 12.
-func _build_inside(state) -> void:
-	state.layout.set_in_good(0, "iron")
-	state.layout.set_in_good(1, "coal")
-	state.layout.set_in_good(2, "coal")
-	state.machines.place("blast_furnace", Vector2i(8, 5), 0)
-	state.machines.place("converter", Vector2i(14, 6), 0)
-	for path in [[Vector2i(0, 6), Vector2i(3, 6), Vector2i(3, 5), Vector2i(7, 5)],
-			[Vector2i(0, 12), Vector2i(6, 12), Vector2i(6, 7), Vector2i(7, 7)],
-			[Vector2i(11, 6), Vector2i(13, 6)],
-			[Vector2i(0, 17), Vector2i(12, 17), Vector2i(12, 7), Vector2i(13, 7)],
-			[Vector2i(16, 7), Vector2i(20, 7), Vector2i(20, 12), Vector2i(39, 12)]]:
-		_lay(state.grid, path)
-	for port in state.machines.ports(0) + state.machines.ports(1):
-		_check(state.machines.connected(port), "inside: %s port not connected" % port["good"])
-
-
-## Belts along `corners`, each cell pointing to the next; the last keeps the last direction.
-func _lay(grid, corners: Array) -> void:
-	var dir := Vector2i(1, 0)
-	for k in corners.size() - 1:
-		var from: Vector2i = corners[k]
-		var to: Vector2i = corners[k + 1]
-		dir = Vector2i(signi(to.x - from.x), signi(to.y - from.y))
-		var cell := from
-		while cell != to:
-			grid.set_belt(cell, dir)
-			cell += dir
-	grid.set_belt(corners[corners.size() - 1], dir)
+	print("HAULING_OK sold=", sales["sold"], " money +", sold_money, " piles=", gates.inputs, " out=", gates.outputs)
 
 
 ## The balloons (kind, good) standing over a building

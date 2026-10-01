@@ -1,16 +1,12 @@
 extends Node
 
-## Runs every factory on png_map.tscn (docs/fabrika_ici.md "Haritaya bağlama"): each frame it
-## advances each factory's inside (the `state` on its placer record) by game time - real time
-## times the clock's speed, nothing while paused - whether or not anyone is looking inside.
-## It also keeps the map face up to date: the badge's gear turns while any machine works, its
-## chip shows the output stock, and the chimney smokes only while something works.
+## Runs every factory on png_map.tscn (docs/hat_fabrikasi.md): each frame it advances each
+## factory's lines (the `factory` on its placer record, an economy/line_factory.gd) by game time -
+## real time times the clock's speed, nothing while paused - and moves its campus picture along
+## (piles, dots, smoke); campuses off screen are not redrawn.
 
-const FactoryState = preload("res://factory/factory_state.gd")
+const LineFactory = preload("res://economy/line_factory.gd")
 const GameClock = preload("res://economy/game_clock.gd")
-
-## Radians a second the badge gear turns at 1x
-const SPIN := 2.5
 
 @export var placer_path: NodePath = ^"../Depots"
 @export var clock_path: NodePath = ^"../Clock"
@@ -28,27 +24,27 @@ func _process(delta: float) -> void:
 	if _placer == null:
 		return
 	advance(delta * (_clock.speed if _clock != null else 1))
-
-
-## Runs every factory for `game_seconds` and refreshes their badges.
-func advance(game_seconds: float) -> void:
+	var view := Rect2()
+	if is_inside_tree():
+		view = get_viewport().get_canvas_transform().affine_inverse() * get_viewport().get_visible_rect()
 	for record in _placer.factory_records():
-		var state: FactoryState = record["state"]
-		state.advance(game_seconds)
-		var working := is_working(state)
-		var badge: Node2D = record["badge"]
-		if working:
-			badge.spin = wrapf(badge.spin + game_seconds * SPIN, 0.0, TAU)
-		if badge.working != working:
-			badge.working = working
-			record["visual"].smoking = working
-		if badge.output != state.layout.out_stock:
-			badge.output = state.layout.out_stock.duplicate()
+		if view.grow(200.0).has_point(record["center"]):
+			record["visual"].campus.queue_redraw()
 
 
-## Whether any machine inside is working.
-static func is_working(state: FactoryState) -> bool:
-	for m in state.machines.machines:
-		if m["status"] == "working":
+## Runs every factory for `game_seconds`.
+func advance(game_seconds: float) -> void:
+	if game_seconds <= 0.0:
+		return
+	for record in _placer.factory_records():
+		var factory: LineFactory = record["factory"]
+		factory.advance(game_seconds)
+		record["visual"].campus.time += game_seconds
+
+
+## Whether any line is working.
+static func is_working(factory: LineFactory) -> bool:
+	for line in factory.lines:
+		if not line.is_empty() and line["status"] == "working":
 			return true
 	return false

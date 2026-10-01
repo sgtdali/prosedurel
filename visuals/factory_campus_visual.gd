@@ -38,7 +38,6 @@ const PLOT_H := 62.0
 const PLOT_W := 58.0
 const PLOT_STEP := 64.0
 const LEFT := -130.0
-const OPTION_R := 9.0
 ## Dots run this fast (units per game second) along every belt
 const DOT_SPEED := 14.0
 const DOT_GAP := 6.0
@@ -76,11 +75,18 @@ var time := 0.0
 
 var _paint
 var _mesh: ArrayMesh
+## Child layer for what stays level and screen-sized (tray, sign)
+var _upright: Node2D
+var _upright_mesh: ArrayMesh
 
 
 func _ready() -> void:
 	if factory == null:
 		factory = _demo()
+	_upright = Node2D.new()
+	_upright.z_index = 1
+	_upright.draw.connect(_draw_upright)
+	add_child(_upright)
 
 
 func _process(delta: float) -> void:
@@ -96,7 +102,7 @@ func _draw() -> void:
 	_paint_all()
 	_mesh = _paint.commit(self)
 	_paint = null
-	_draw_texts()
+	_place_upright()
 
 
 static func _demo() -> LineFactory:
@@ -194,15 +200,11 @@ func switch_point() -> Vector2:
 	return Vector2(_port_x(parts[0], "steel") - 9.0, RACK["steel"])
 
 
-## Menu option centres over the menu's plot
+## Menu option centres (campus coordinates)
 func option_points() -> Array[Vector2]:
 	var out: Array[Vector2] = []
-	if menu.is_empty():
-		return out
-	var p := plot_rect(menu["plot"]) if menu["plot"] >= 0 else annex_rect()
-	var count: int = menu["options"].size()
-	for k in count:
-		out.append(Vector2(p.get_center().x + (k - (count - 1) * 0.5) * 24.0, p.position.y + 22.0))
+	for q in _upright_options():
+		out.append(_from_up(q))
 	return out
 
 
@@ -210,7 +212,7 @@ func option_points() -> Array[Vector2]:
 func target_at(point: Vector2) -> Dictionary:
 	var options := option_points()
 	for k in options.size():
-		if point.distance_to(options[k]) <= OPTION_R + 1.0:
+		if point.distance_to(options[k]) <= _option_radius() * 1.1:
 			return {"kind": "option", "index": k}
 	var sw := switch_point()
 	if sw != Vector2.INF and point.distance_to(sw) <= 7.0:
@@ -260,7 +262,6 @@ func _paint_all() -> void:
 			var bob := sin(time * 3.0 + i) * 1.2
 			_draw_balloon(plot_rect(i).position + Vector2(PLOT_W - 12.0, 9.0 + bob), line["short"] if line["status"] == "starved" else "")
 	_draw_hover()
-	_draw_menu()
 
 
 func _draw_road() -> void:
@@ -586,13 +587,9 @@ func _draw_annex() -> void:
 	var annex := annex_rect()
 	_paint.rect(annex, GRASS.darkened(0.05))
 	_dashed_rect(annex, Color("#7d6a5c"), 1.0, 3.0)
-	var c := annex.get_center()
-	_paint.rect(Rect2(c + Vector2(-0.8, 0.0), Vector2(1.6, 10.0)), RIM)
-	_paint.rect(Rect2(c + Vector2(-11.0, -9.0) + Vector2(1.0, 1.4), Vector2(22.0, 12.0)), Color(0, 0, 0, 0.2))
-	_paint.rect(Rect2(c + Vector2(-11.0, -9.0), Vector2(22.0, 12.0)), CARD)
-	_paint.rect(Rect2(c + Vector2(-11.0, -9.0), Vector2(22.0, 12.0)), RIM, false, 0.8)
-	_paint.circle(c + Vector2(-6.0, -3.0), 3.0, Color("#e8b830"))
-	_paint.circle(c + Vector2(-6.4, -3.4), 2.0, Color("#f6d35a"))
+	# Survey pegs; the for-sale sign is on the upright layer
+	for corner in [annex.position + Vector2(3, 3), Vector2(annex.end.x - 3, annex.position.y + 3), annex.end - Vector2(3, 3), Vector2(annex.position.x + 3, annex.end.y - 3)]:
+		_paint.circle(corner, 1.3, ACCENT)
 
 
 # --- Trucks, fence, balloons, hover, menu ------------------------------------------------
@@ -653,65 +650,119 @@ func _draw_hover() -> void:
 	_paint.rect(area.grow(1.5), HIGHLIGHT, false, 1.4)
 
 
-func _draw_menu() -> void:
-	if menu.is_empty():
+## --- Upright layer: the build tray and the for-sale sign stay level and keep their size on
+## screen however the campus is turned or the map zoomed ---
+
+## Screen pixels per upright unit
+const UI_SCALE := 1.0
+const OPTION_UI_R := 15.0
+const OPTION_UI_GAP := 40.0
+
+
+func _place_upright() -> void:
+	if _upright == null or not is_inside_tree():
 		return
-	var points := option_points()
-	# A cream tray behind the options
-	var tray := Rect2(points[0] - Vector2(OPTION_R + 4.0, OPTION_R + 3.0), Vector2(points[-1].x - points[0].x + (OPTION_R + 4.0) * 2.0, OPTION_R * 2.0 + 14.0))
-	_paint.rect(Rect2(tray.position + Vector2(1.5, 2.0), tray.size), Color(0, 0, 0, 0.25))
-	_paint.rect(tray, CARD)
-	_paint.rect(tray, RIM, false, 1.0)
-	for k in points.size():
-		var option: Dictionary = menu["options"][k]
-		var c := points[k]
-		var lit: bool = hover.get("kind", "") == "option" and hover["index"] == k
-		_paint.circle(c, OPTION_R, (HIGHLIGHT if lit else Color("#e9e1cf")) if option["enabled"] else Color("#cfc7b6"))
-		_paint.arc(c, OPTION_R, 0, TAU, 32, RIM if option["enabled"] else Color("#9a8e7e"), 1.0)
-		_draw_option_icon(option["id"], c, option["enabled"])
+	var zoom := get_viewport().get_canvas_transform().get_scale().x
+	var size := UI_SCALE / maxf(global_scale.x * zoom, 0.001)
+	_upright.rotation = -global_rotation
+	_upright.scale = Vector2.ONE * size
+	_upright.queue_redraw()
 
 
-func _draw_option_icon(id: String, c: Vector2, enabled: bool) -> void:
+## A campus point in upright units and back
+func _to_up(point: Vector2) -> Vector2:
+	return _upright.transform.affine_inverse() * point
+
+
+func _from_up(point: Vector2) -> Vector2:
+	return _upright.transform * point
+
+
+func _option_radius() -> float:
+	return OPTION_UI_R * (_upright.scale.x if _upright != null else 1.0)
+
+
+func _menu_anchor() -> Vector2:
+	return plot_rect(menu["plot"]).get_center() if menu["plot"] >= 0 else annex_rect().get_center()
+
+
+func _upright_options() -> Array[Vector2]:
+	var out: Array[Vector2] = []
+	if menu.is_empty() or _upright == null:
+		return out
+	var anchor := _to_up(_menu_anchor())
+	var count: int = menu["options"].size()
+	for k in count:
+		out.append(anchor + Vector2((k - (count - 1) * 0.5) * OPTION_UI_GAP, 0.0))
+	return out
+
+
+func _draw_upright() -> void:
+	_paint = Painter.new()
+	var font := ThemeDB.fallback_font
+	var texts: Array = []
+	if has_annex():
+		var c := _to_up(annex_rect().get_center())
+		var board := Rect2(c + Vector2(-34.0, -15.0), Vector2(68.0, 22.0))
+		_paint.rect(Rect2(board.position + Vector2(2.0, 3.0), board.size), Color(0, 0, 0, 0.2))
+		_paint.rect(board, CARD)
+		_paint.rect(board, RIM, false, 1.5)
+		_paint.circle(board.position + Vector2(12.0, 11.0), 6.5, Color("#e8b830"))
+		_paint.circle(board.position + Vector2(11.0, 10.0), 4.5, Color("#f6d35a"))
+		texts.append([LineFactory.SLOT_COST, board.position + Vector2(42.0, 16.0), TEXT])
+	var points := _upright_options()
+	if not points.is_empty():
+		var r := OPTION_UI_R
+		var tray := Rect2(points[0] - Vector2(r + 7.0, r + 6.0), Vector2(points[-1].x - points[0].x + (r + 7.0) * 2.0, r * 2.0 + 26.0))
+		_paint.rect(Rect2(tray.position + Vector2(2.0, 3.0), tray.size), Color(0, 0, 0, 0.25))
+		_paint.rect(tray, CARD)
+		_paint.rect(tray, RIM, false, 2.0)
+		for k in points.size():
+			var option: Dictionary = menu["options"][k]
+			var c := points[k]
+			var lit: bool = hover.get("kind", "") == "option" and hover["index"] == k
+			_paint.circle(c, r, (HIGHLIGHT if lit else Color("#e9e1cf")) if option["enabled"] else Color("#cfc7b6"))
+			_paint.arc(c, r, 0, TAU, 32, RIM if option["enabled"] else Color("#9a8e7e"), 1.6)
+			_draw_option_icon(option["id"], c, option["enabled"], r / 9.0)
+			var price: int = option["price"]
+			if price != 0:
+				texts.append([price, c + Vector2(0.0, r + 14.0), (OK.darkened(0.3) if price < 0 else TEXT) if option["enabled"] else BAD])
+	_upright_mesh = _paint.commit(_upright)
+	_paint = null
+	for t in texts:
+		_text(font, t[0], t[1], 11, t[2])
+
+
+func _draw_option_icon(id: String, c: Vector2, enabled: bool, k: float) -> void:
 	var dim := func(color: Color) -> Color: return color if enabled else color.lerp(Color("#b5ad9e"), 0.7)
 	match id:
 		"steel":
-			_paint.circle(c + Vector2(-1.0, 1.0), 5.0, dim.call(Color("#6b5a52")))
-			_paint.circle(c + Vector2(-1.0, 1.0), 2.4, dim.call(Color("#ff9a3c")))
-			_paint.rect(Rect2(c + Vector2(2.0, -6.0), Vector2(2.6, 4.0)), dim.call(Color("#4a4240")))
+			_paint.circle(c + Vector2(-1.0, 1.0) * k, 5.0 * k, dim.call(Color("#6b5a52")))
+			_paint.circle(c + Vector2(-1.0, 1.0) * k, 2.4 * k, dim.call(Color("#ff9a3c")))
+			_paint.rect(Rect2(c + Vector2(2.0, -6.0) * k, Vector2(2.6, 4.0) * k), dim.call(Color("#4a4240")))
 		"parts":
-			_draw_gear(c, 5.0, dim.call(GOODS["machine_parts"].darkened(0.1)), 0.0)
-			_paint.circle(c, 1.8, dim.call(Color("#e9e1cf")))
+			_draw_gear(c, 5.0 * k, dim.call(GOODS["machine_parts"].darkened(0.1)), 0.0)
+			_paint.circle(c, 1.8 * k, dim.call(Color("#e9e1cf")))
 		"upgrade":
-			_paint.polygon(PackedVector2Array([c + Vector2(0, -6), c + Vector2(5, -1), c + Vector2(-5, -1)]), dim.call(OK))
-			_paint.rect(Rect2(c + Vector2(-2.0, -1.0), Vector2(4.0, 6.0)), dim.call(OK))
+			_paint.polygon(PackedVector2Array([c + Vector2(0, -6) * k, c + Vector2(5, -1) * k, c + Vector2(-5, -1) * k]), dim.call(OK))
+			_paint.rect(Rect2(c + Vector2(-2.0, -1.0) * k, Vector2(4.0, 6.0) * k), dim.call(OK))
 		"remove":
-			_paint.line(c + Vector2(-4, -4), c + Vector2(4, 4), dim.call(BAD), 2.2)
-			_paint.line(c + Vector2(-4, 4), c + Vector2(4, -4), dim.call(BAD), 2.2)
+			_paint.line(c + Vector2(-4, -4) * k, c + Vector2(4, 4) * k, dim.call(BAD), 2.2 * k)
+			_paint.line(c + Vector2(-4, 4) * k, c + Vector2(4, -4) * k, dim.call(BAD), 2.2 * k)
 		"slot":
-			_paint.circle(c, 4.5, dim.call(Color("#e8b830")))
-			_paint.circle(c + Vector2(-0.6, -0.6), 3.0, dim.call(Color("#f6d35a")))
-
-
-## Prices under the menu options and on the for-sale sign
-func _draw_texts() -> void:
-	var font := ThemeDB.fallback_font
-	if has_annex():
-		var c := annex_rect().get_center()
-		_text(font, LineFactory.SLOT_COST, c + Vector2(4.5, -0.6), 5, TEXT)
-	if menu.is_empty():
-		return
-	var points := option_points()
-	for k in points.size():
-		var option: Dictionary = menu["options"][k]
-		if option["price"] != 0:
-			var price: int = option["price"]
-			_text(font, price, points[k] + Vector2(0.0, OPTION_R + 6.0), 5, (OK.darkened(0.3) if price < 0 else TEXT) if option["enabled"] else BAD)
+			_paint.circle(c, 4.5 * k, dim.call(Color("#e8b830")))
+			_paint.circle(c + Vector2(-0.6, -0.6) * k, 3.0 * k, dim.call(Color("#f6d35a")))
+	if id in ["steel", "parts"] and not enabled:
+		# Locked: a small padlock
+		var p := c + Vector2(5.0, 5.0) * k
+		_paint.arc(p + Vector2(0, -1.6) * k, 1.8 * k, PI, TAU, 12, Color("#5a4a3a"), 0.9 * k)
+		_paint.rect(Rect2(p + Vector2(-2.4, -1.4) * k, Vector2(4.8, 3.8) * k), Color("#5a4a3a"))
 
 
 func _text(font: Font, amount: int, at: Vector2, size: int, color: Color) -> void:
 	var text := ("+" if amount < 0 else "") + _thousands(absi(amount))
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-	draw_string(font, at + Vector2(-w * 0.5, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	_upright.draw_string(font, at + Vector2(-w * 0.5, 0.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
 
 
 static func _thousands(amount: int) -> String:

@@ -12,7 +12,7 @@ extends Node2D
 ## (steel 200, parts 600). Esc or a click elsewhere closes a tray; Space pauses, 1-3 speed.
 
 const LineFactory = preload("res://economy/line_factory.gd")
-const Goods = preload("res://facility/goods.gd")
+const CampusActions = preload("res://ui/campus_actions.gd")
 
 const PRICES := {"steel": 200, "machine_parts": 600}
 const TRUCK_LOAD := 20.0
@@ -21,8 +21,6 @@ const TRUCK_SPEED := 45.0
 const UNLOAD_TIME := 1.5
 ## Truck rates a bay click goes through (units per game second)
 const RATE_STEPS: Array[float] = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0]
-const SHARE_STEPS: Array[float] = [0.0, 0.25, 0.5, 0.75, 1.0]
-const NAMES := {"steel": "Çelik hattı", "parts": "Parça hattı"}
 
 @onready var wallet = $Wallet
 @onready var clock = $Clock
@@ -101,7 +99,7 @@ func _arrive(truck: Dictionary) -> void:
 			truck["loaded"] = true
 
 
-## --- Clicks ---
+## --- Clicks (ui/campus_actions.gd, the same as on the map) ---
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
@@ -121,9 +119,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				_open_plot_menu(target["index"])
 		"annex":
 			if menu.get("plot", -2) != -1:
-				campus.menu = {"plot": -1, "options": [_option("slot", LineFactory.SLOT_COST)]}
+				campus.menu = CampusActions.annex_menu(factory)
 		"switch":
-			factory.parts_share = _next(SHARE_STEPS, factory.parts_share)
+			factory.parts_share = CampusActions.next_share(factory.parts_share)
 		"bay", "out":
 			var good: String = target["good"]
 			rates[good] = _next(RATE_STEPS, rates[good])
@@ -134,29 +132,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _open_plot_menu(slot: int) -> void:
-	var line: Dictionary = factory.lines[slot]
-	var options: Array = []
-	if line.is_empty():
-		for kind in LineFactory.LINES:
-			options.append(_option(kind, LineFactory.info(kind)["cost"]))
-	else:
-		if factory.upgrade_cost(slot) > 0:
-			options.append(_option("upgrade", factory.upgrade_cost(slot)))
-		options.append({"id": "remove", "price": -factory.refund(slot), "enabled": true})
-	campus.menu = {"plot": slot, "options": options}
-
-
-func _option(id: String, price: int) -> Dictionary:
-	return {"id": id, "price": price, "enabled": factory.can_afford(price)}
+	campus.menu = CampusActions.plot_menu(factory, slot, true)
 
 
 func _choose(menu: Dictionary, id: String) -> void:
-	var slot: int = menu["plot"]
-	match id:
-		"steel", "parts": factory.build(slot, id)
-		"upgrade": factory.upgrade(slot)
-		"remove": factory.remove(slot)
-		"slot": factory.open_slot()
+	CampusActions.choose(factory, menu, id, factory.open_slot)
 
 
 static func _next(steps: Array[float], value: float) -> float:
@@ -171,37 +151,12 @@ static func _next(steps: Array[float], value: float) -> float:
 func _update_hover() -> void:
 	var target: Dictionary = campus.target_at(campus.to_local(get_global_mouse_position()))
 	campus.hover = target
-	var text := _tip_text(target)
+	var text := CampusActions.tip(factory, target, campus.menu, true, 0)
+	if target.get("kind", "") in ["bay", "out"]:
+		text += "
+Kamyon: %s/sn (deneme, tıkla)" % LineFactory._rate(rates[target["good"]])
 	_tip.visible = text != ""
 	if _tip.visible:
 		_tip.text = text
 		_tip.reset_size()
 		_tip.position = get_viewport().get_mouse_position() + Vector2(18.0, 14.0)
-
-
-func _tip_text(target: Dictionary) -> String:
-	match target.get("kind", ""):
-		"plot":
-			var line: Dictionary = factory.lines[target["index"]]
-			if line.is_empty():
-				return "Boş parsel — tıkla, hat kur"
-			var text := "%s · seviye %d · %%%d" % [NAMES[line["kind"]], line["level"], roundi(line["rate"] * 100.0)]
-			match line["status"]:
-				"starved": text += "\n%s eksik" % Goods.name_of(line["short"])
-				"blocked": text += "\nÇıkış deposu dolu"
-			return text
-		"annex": return "Satılık parsel — tıkla, satın al"
-		"switch": return "Çelik makası: %%%d parça hattına — tıkla, değiştir" % roundi(factory.parts_share * 100.0)
-		"bay", "out":
-			var good: String = target["good"]
-			var stock: float = factory.inputs[good] if target["kind"] == "bay" else factory.outputs[good]
-			return "%s %d / %d — kamyon: %s/sn (deneme, tıkla)" % [Goods.name_of(good), roundi(stock), roundi(LineFactory.CAPACITY), LineFactory._rate(rates[good])]
-		"option":
-			var id: String = campus.menu["options"][target["index"]]["id"]
-			match id:
-				"steel": return "Çelik hattı: " + LineFactory.recipe_text("steel")
-				"parts": return "Parça hattı: " + LineFactory.recipe_text("parts")
-				"upgrade": return "Hızlandır: bir seviye daha hızlı"
-				"remove": return "Kaldır, yarısı geri"
-				"slot": return "Parseli satın al"
-	return ""

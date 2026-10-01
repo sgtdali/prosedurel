@@ -128,18 +128,56 @@ func open_slot() -> bool:
 	return true
 
 
-## A truck unloads: takes what fits of `amount`, returns it
+## What the lines give back when the whole factory is taken away: half of what each cost
+func contents_refund() -> int:
+	var total := 0
+	for slot in lines.size():
+		total += refund(slot)
+	return total
+
+
+## Opened slots beyond the first ones, for a refund too
+func slots_bought() -> int:
+	return slots - START_SLOTS
+
+
+## --- Trucks (economy/hauling.gd): whole units only ---
+
+## Whether the lines use `good`, so trucks bring it
+func takes(good: String) -> bool:
+	return INPUT_GOODS.has(good) and need_of(good) > 0.0
+
+
+## Units of `good` trucks may still bring
+func room_for(good: String) -> int:
+	return floori(CAPACITY - inputs[good]) if takes(good) else 0
+
+
+## Units of `good` waiting in the input pile
+func in_amount(good: String) -> int:
+	return floori(inputs.get(good, 0.0))
+
+
+## Whole units of `good` ready in the output yard
+func ready_amount(good: String) -> int:
+	return floori(outputs.get(good, 0.0))
+
+
+## A truck unloads: takes what fits of `amount` (whole units of room), returns it
 func deliver(good: String, amount: float) -> float:
-	var taken := minf(amount, CAPACITY - inputs[good])
+	if not INPUT_GOODS.has(good):
+		return 0.0
+	var taken := minf(amount, floorf(CAPACITY - inputs[good]))
 	inputs[good] += taken
 	return taken
 
 
-## A truck loads: gives what there is of `amount`, returns it
+## A truck loads: gives up to `amount` of the whole units there are, returns it
 func take_out(good: String, amount: float) -> float:
-	var given := minf(amount, outputs[good])
-	outputs[good] -= given
-	return given
+	var given := minf(amount, floorf(outputs.get(good, 0.0)))
+	if given > 0.0:
+		outputs[good] -= given
+	return maxf(given, 0.0)
 
 
 ## Units per second of `good` this factory wants when every line runs full

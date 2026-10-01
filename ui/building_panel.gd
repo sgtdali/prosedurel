@@ -4,8 +4,8 @@ extends Control
 ## its truck panel (depot_panel.gd); anything else - a mine, a mine storage yard, a factory, a
 ## sales depot - opens this card under the date panel, saying what it is and how it is doing,
 ## with Taşı (move it, free) and Kaldır (remove it, half its price back). Removing a factory
-## loses its stocks and everything inside, so Kaldır asks once more ("Emin misin?"); a factory
-## also gets İçeri gir, which opens its inside over the map (factory_view.gd).
+## loses its stocks and lines (half their price back), so Kaldır asks once more ("Emin misin?").
+## A factory's plots, plot for sale and steel switch take their own clicks (campus_panel.gd).
 ## A click on a town (no building under it) opens the town's card instead (town_panel.gd).
 ## Esc or a click on empty ground lets go.
 
@@ -14,7 +14,7 @@ const Mining = preload("res://economy/mining.gd")
 const Hauling = preload("res://economy/hauling.gd")
 const Goods = preload("res://facility/goods.gd")
 const Wallet = preload("res://economy/wallet.gd")
-const FactoryState = preload("res://factory/factory_state.gd")
+const LineFactory = preload("res://economy/line_factory.gd")
 const Factories = preload("res://economy/factories.gd")
 
 const CARD := Color("#f1ebdc")
@@ -26,7 +26,6 @@ const ACCENT := Color("#d9733f")
 @export var roads_path: NodePath = ^"../../Roads"
 @export var hauling_path: NodePath = ^"../../Hauling"
 @export var mining_path: NodePath = ^"../../Mining"
-@export var view_path: NodePath = ^"../../FactoryView"
 @export var cities_path: NodePath = ^"../../Cities"
 @export var town_panel_path: NodePath = ^"../TownPanel"
 
@@ -38,7 +37,6 @@ var _mining: Mining
 var _card: PanelContainer
 var _text: Label
 var _remove_button: Button
-var _enter_button: Button
 ## A factory's Kaldır was pressed once; the next press removes it
 var _confirming := false
 var _refresh_timer := 0.0
@@ -87,8 +85,6 @@ func _build() -> void:
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 8)
 	column.add_child(actions)
-	_enter_button = make_button("İçeri gir", func() -> void: enter_selected())
-	actions.add_child(_enter_button)
 	actions.add_child(make_button("Taşı", func() -> void: move_selected()))
 	_remove_button = make_button("Kaldır", func() -> void: remove_selected())
 	actions.add_child(_remove_button)
@@ -121,21 +117,10 @@ func select(record: Dictionary) -> void:
 	selected = record
 	_confirming = false
 	_remove_button.text = "Kaldır"
-	_enter_button.visible = record.get("kind", "") == "factory"
 	if _placer != null:
 		_placer.highlighted = record
 	_card.visible = not record.is_empty()
 	_refresh()
-
-
-## Opens the selected factory's inside over the map.
-func enter_selected() -> void:
-	var record := selected
-	var view = get_node_or_null(view_path)
-	if view == null or record.get("kind", "") != "factory":
-		return
-	select({})
-	view.open(record)
 
 
 func move_selected() -> void:
@@ -231,17 +216,25 @@ func _refresh() -> void:
 					feeding += 1
 			lines.append("Bağlı maden: %d" % feeding)
 		"factory":
-			var state: FactoryState = selected["state"]
-			var layout := state.layout
+			var factory: LineFactory = selected["factory"]
 			lines.append(selected["name"])
-			lines.append("Durum: " + ("çalışıyor" if Factories.is_working(state) else "duruyor"))
-			for k in layout.in_goods.size():
-				var good: String = layout.in_goods[k]
-				lines.append("Giriş %d: %s" % [k + 1, "mal seçilmedi" if good == "" else "%s %d/%d" % [Goods.name_of(good), layout.in_stock[k], layout.CAPACITY]])
-			lines.append("Çıktı stoku: " + _stock_text(layout.out_stock))
-			lines.append("Makine: %d · bant: %d" % [state.machines.machines.size(), state.grid.belts.size()])
+			var built := 0
+			for line in factory.lines:
+				if not line.is_empty():
+					built += 1
+			lines.append("Hat: %d / %d parsel · %s" % [built, factory.slots, "çalışıyor" if Factories.is_working(factory) else "duruyor"])
+			var piles: Array[String] = []
+			for good in LineFactory.INPUT_GOODS:
+				if factory.takes(good) or factory.in_amount(good) > 0:
+					piles.append("%s %d" % [Goods.name_of(good), factory.in_amount(good)])
+			lines.append("Girdi: " + (", ".join(piles) if not piles.is_empty() else "hat yok"))
+			var ready := {}
+			for good in LineFactory.OUTPUT_GOODS:
+				if factory.ready_amount(good) > 0:
+					ready[good] = factory.ready_amount(good)
+			lines.append("Çıktı: " + _stock_text(ready))
 			if _confirming:
-				lines.append("Stoklar ve içerideki her şey kaybolur.")
+				lines.append("Stoklar ve hatlar kaybolur.")
 		"sales":
 			lines.append(selected["name"])
 			var prices: Array[String] = []

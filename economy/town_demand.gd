@@ -67,7 +67,7 @@ func is_unlocked(good: String) -> bool:
 	return unlocked.get(good, false)
 
 func can_build(kind: String) -> bool:
-	return kind != "parts_assembler" or is_unlocked("machine_parts")
+	return kind != "parts" or is_unlocked("machine_parts")
 
 func required_goods(town: Dictionary) -> Array[String]:
 	var goods: Array[String] = ["steel"]

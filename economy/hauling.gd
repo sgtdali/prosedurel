@@ -8,9 +8,9 @@ extends Node2D
 ## takes the last one off (it delivers what it carries, then drives home). A truck on a route
 ## loops on its own:
 ## depot -> load (up to CAPACITY) -> unload -> load -> ... At a yard it takes, of the ores the
-## factory's in gates take and have room for, the one it is shortest of; at a factory it waits
-## for at least half a load of a good the other end takes. A factory's gates take what they can
-## (factory_layout.gd deliver), the truck waits with the rest. At a sales depot the load is sold
+## factory's lines use and its piles have room for, the one it is shortest of; at a factory it
+## waits for at least half a load of a good the other end takes. A factory's piles take what
+## fits (line_factory.gd deliver), the truck waits with the rest. At a sales depot the load is sold
 ## to its town (economy/town_demand.gd: SALE_PRICES up to what the town asks for this month, a
 ## quarter of it for the rest) and the money floats up there, pale when some went cheap. A truck without a route waits at
 ## its depot. Trucks joining a route set off STAGGER seconds apart.
@@ -24,7 +24,7 @@ const GameClock = preload("res://economy/game_clock.gd")
 const Mining = preload("res://economy/mining.gd")
 const Wallet = preload("res://economy/wallet.gd")
 const Goods = preload("res://facility/goods.gd")
-const FactoryLayout = preload("res://factory/factory_layout.gd")
+const LineFactory = preload("res://economy/line_factory.gd")
 const FlowMeter = preload("res://economy/flow_meter.gd")
 
 const TRUCK_COST := 1500
@@ -519,7 +519,7 @@ func _load(truck: Truck) -> bool:
 		return false
 	# Of the ores the factory at the other end takes and has room for, the one it is shortest
 	# of; else the yard's biggest pile.
-	var gates: FactoryLayout = _gates_of(truck.dropoff)
+	var gates: LineFactory = _gates_of(truck.dropoff)
 	var best := ""
 	for ore in yard["stock"]:
 		if yard["stock"][ore] <= 0:
@@ -549,10 +549,10 @@ func _load(truck: Truck) -> bool:
 ## factory's gates): at least half a load, or whatever there is once the truck has waited
 ## PATIENCE.
 func _load_from_factory(truck: Truck) -> bool:
-	var stock: FactoryLayout = _gates_of(truck.pickup)
+	var stock: LineFactory = _gates_of(truck.pickup)
 	var selling: bool = truck.dropoff.get("kind", "") == "sales"
-	var gates: FactoryLayout = _gates_of(truck.dropoff)
-	var goods: Array = stock.out_stock.keys()
+	var gates: LineFactory = _gates_of(truck.dropoff)
+	var goods: Array = stock.outputs.keys()
 	if selling and _demand != null and truck.dropoff.has("town"):
 		var town: Dictionary = truck.dropoff["town"]
 		goods = goods.filter(func(good: String) -> bool: return _demand.required_goods(town).has(good))
@@ -560,10 +560,10 @@ func _load_from_factory(truck: Truck) -> bool:
 	for good in goods:
 		if selling and not SALE_PRICES.has(good) or gates != null and gates.room_for(good) <= 0:
 			continue
-		var ready: int = stock.out_stock[good]
+		var ready: int = stock.ready_amount(good)
 		if ready >= CAPACITY / 2 or ready > 0 and truck.waited >= PATIENCE:
 			truck.ore = good
-			truck.amount = stock.take_out(good, CAPACITY)
+			truck.amount = int(stock.take_out(good, CAPACITY))
 			if truck.route != null:
 				truck.route.last_good = good
 			truck.waited = 0.0
@@ -577,9 +577,9 @@ func _load_from_factory(truck: Truck) -> bool:
 func _unload(truck: Truck) -> bool:
 	if truck.amount <= 0:
 		return true
-	var gates: FactoryLayout = _gates_of(truck.dropoff)
+	var gates: LineFactory = _gates_of(truck.dropoff)
 	if gates != null:
-		var delivered := gates.deliver(truck.ore, truck.amount)
+		var delivered := int(gates.deliver(truck.ore, truck.amount))
 		truck.amount -= delivered
 		if truck.route != null and delivered > 0:
 			truck.route.meter.add(delivered, _time)
@@ -609,9 +609,9 @@ func _unload(truck: Truck) -> bool:
 	return true
 
 
-## A factory record's gates and stocks, or null for anything else.
-static func _gates_of(record: Dictionary) -> FactoryLayout:
-	return record["state"].layout if record.has("state") else null
+## A factory record's lines and stocks, or null for anything else.
+static func _gates_of(record: Dictionary) -> LineFactory:
+	return record.get("factory")
 
 
 func _yard_of(storage_record: Dictionary) -> Dictionary:

@@ -45,10 +45,29 @@ Kurallar: hızlandırma seviye 1 / 2 / 3 = 1× / 1,5× / 2× (seviye n+1, hattı
 ve çıkış depoları 200; aynı türden hatlar eksik girdiyi ihtiyaçlarına göre paylaşır; makasın parça hattına
 gönderip kullanılamayan çeliği satışa döner.
 
+## Haritada (2026-10-01)
+
+Yerleşke png_map'teki tek fabrika: bantlı iç sahne ve kodu (`factory/`, `ui/factory_view.gd`, rozet, eski
+fabrika görseli, ilgili testler) silindi.
+
+- Bina: `visuals/factory_campus_map.gd` yerleşkeyi kapısı yola bakacak şekilde döndürür (harita ölçeği 0,62);
+  yapı menüsü `visuals/factory_campus_thumb.gd` ile örnek yerleşkeyi gösterir. Fabrika 6.000, 4 boş parselle gelir.
+- Kayıt: `buildings/depot_placer.gd` fabrika kaydında `factory` (LineFactory, cüzdandan öder). Parsel satın almak
+  (`grow_factory`) yerleşkeyi yoldan uzağa bir parsel genişletir; yer yoksa nedeni ("Alan dolu", "Nehir üzerinde")
+  farenin yanında görünür. Kaldırınca: binanın, hatların ve alınan parsellerin yarısı geri.
+- Zaman: `economy/factories.gd` hatları oyun saatiyle çalıştırır; ekrandaki yerleşkeleri her kare yeniden çizer.
+- Kamyonlar (`economy/hauling.gd`): fabrikanın hatlarının kullandığı cevheri getirir (hattı olmayan malı almaz),
+  çıkış sahasından tam birimle yükler.
+- Tıklama (`ui/campus_panel.gd`, sandbox ile ortak kurallar `ui/campus_actions.gd`): parsel, satılık parsel,
+  makas; tepsi ve fiyatlar dik ve ekranda sabit boyutta kalır. Parça hattı nüfus açılımına kadar kilitli.
+  Yerleşkenin başka yerine tıklamak bina kartını açar (hat sayısı, yığınlar, çıktı; Taşı / Kaldır).
+- Harita balonları ve Tab katmanı yığınlardan ve akışlardan okur.
+- Bilinen eksik: başka fabrikadan kamyonla çelik getirmek (fabrikadan fabrikaya rota) şimdilik yok; parça hattı
+  çeliği yalnız kendi yerleşkesinin çelik hatlarından alır. Haritadaki kamyonlar kapıda durur, yerleşkenin
+  içindeki şeritte görünmez.
+
 ## Bakılacaklar
 
 - Kararlar ilginç mi: hangi hat, kaç yuva, hızlandırma mı yeni yuva mı, paylaştırma oranı?
 - Haritadaki akışı bozmuyor mu? Yerleşke haritada ne kadar yer kaplamalı?
-- Haritaya bağlanırsa: mevcut "Fabrika" binasının yerine yerleşke kurulur, kamyonlar gerçek rotalardan gelir;
-  her kare yeniden çizim yerine sabit ve hareketli katman ayrılmalı.
-  O zaman bant kodu (flow_sim, belt_grid, belts_view, splitter/merger/tünel, factory_interior) kaldırılır.
+- Çok fabrikada performans: her kare yeniden çizim yerine sabit ve hareketli katman ayrılmalı.

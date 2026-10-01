@@ -1,5 +1,9 @@
 # Fabrika içi (bantlı üretim) tasarımı
 
+> **Kaldırıldı (2026-10-01).** Bant çekmek haritanın makro akışıyla çatıştı; fabrika artık haritada
+> hat parselli bir yerleşke (`docs/hat_fabrikasi.md`). Bu doküman ve kodu geçmiş kaydı olarak duruyor; kod
+> silindi (git geçmişinde).
+
 2026-09-29 · beyin fırtınası sonucu
 
 ## Yön

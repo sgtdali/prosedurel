@@ -84,12 +84,12 @@ func problems() -> Array[Dictionary]:
 		if not by_record[key]["signs"].has(mark):
 			by_record[key]["signs"].append(mark)
 	for record in _placer.factory_records():
-		var layout = record["state"].layout
-		for good in layout.in_goods:
-			if good != "" and layout.in_amount(good) <= 0:
+		var factory = record["factory"]
+		for good in factory.INPUT_GOODS:
+			if factory.takes(good) and factory.in_amount(good) <= 0:
 				add.call(record, "missing", good)
-		for good in layout.out_stock:
-			if layout.out_stock[good] >= layout.CAPACITY:
+		for good in factory.OUTPUT_GOODS:
+			if factory.ready_amount(good) >= factory.CAPACITY:
 				add.call(record, "full", good)
 	if _mining != null:
 		for record in _placer.storage_records():

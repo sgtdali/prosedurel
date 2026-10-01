@@ -183,10 +183,10 @@ Bu bölümdeki açık sayısal seçimler deneme ayarlarıdır; yeni tasarım ona
 | Büyüme | Bütün ürünler 3 ay üst üste tam karşılanırsa +3 ev, üst sınır 60 |
 | Küçülme | En az karşılanan ürün %30 ve altındaysa ay sonunda −1 ev; başlangıç sınırında durur |
 | Ara durum | %30 üzeri, %100 altı: nüfus sabit; tam ay serisi sıfırlanır |
-| İlk global açılım | 150 toplam ev: makine parçası tarifi ve parça montaj makinesi birlikte açılır |
+| İlk global açılım | 150 toplam ev: makine parçası tarifi ve parça hattı birlikte açılır (2026-10-01 öncesi: montaj makinesi) |
 | Yerel ikinci ihtiyaç | Üretim açıldıktan sonra 20 ve üzeri evli kasabalar çeliğin yanında makine parçası ister |
 | Parça talebi | Ev başına ayda 1; fiyat 600 / fazla ürün 150 |
-| Montaj | 1 çelik + 1 bakır → 1 parça; 4 saniye, 3×3 hücre; makine 4.500 |
+| Parça hattı | 0,5 çelik + 0,5 bakır → 0,5 parça /sn; 9.000 (bantlı fabrikadaki montaj makinesinin yerine, `docs/hat_fabrikasi.md`) |
 | Kamyon bakımı | Bütün sahip olunan kamyonlar için araç başına ayda 40; boşta olanlar dahil |
 | Bakım borcu | Para yetmezse bakiye eksiye iner; satışlar borcu kapatır. Araçlar çalışır, yeni satın alma yeterli para ister |
 | Yol yapımı | Oyuncunun çizdiği son yol eğrisinin uzunluğu × 1, yukarı yuvarlanır; bedel önizlemede görünür |
@@ -201,8 +201,8 @@ ayrıca kayıt sistemi eklemez.
 
 **Görünürlük:** üst kart toplam nüfusu, ilk açılımı ve filonun aylık bakımını gösterir. Kasaba kartında
 ürün başına teslimat/talep ve yüzde, tam ay serisi, asgari nüfus, ay sonu koşulu, kilitli sonraki ihtiyaç
-ve son 12 ay vardır. Harita rozeti en az karşılanan ürünü gösterir. Fabrika kataloğunda montaj makinesi
-baştan görünür, kilitliyken kurulamaz; açıldıktan sonra `6` kısayoluyla da seçilir.
+ve son 12 ay vardır. Harita rozeti en az karşılanan ürünü gösterir. Fabrika parselinin tepsisinde parça hattı
+baştan görünür, kilitliyken asma kilitli ve kurulamaz.
 
 **Doğrulama:** `test_town_demand.gd` büyüme, seri kesilmesi, küçülme, tam %30 sınırı, yerel talep,
 kalıcı açılım ve 25 aylık senaryolu teslimat akışını kontrol eder. Bu uzun akış üretim/rota kapasitesi

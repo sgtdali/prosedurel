@@ -16,7 +16,7 @@ extends Node2D
 const MapIcons = preload("res://ui/map_icons.gd")
 const Goods = preload("res://facility/goods.gd")
 const Mining = preload("res://economy/mining.gd")
-const FactoryLayout = preload("res://factory/factory_layout.gd")
+const LineFactory = preload("res://economy/line_factory.gd")
 
 signal shown_changed(shown: bool)
 
@@ -33,6 +33,7 @@ const DOT_SPEED := 60.0
 @export var mining_path: NodePath = ^"../Mining"
 @export var hauling_path: NodePath = ^"../Hauling"
 @export var roads_path: NodePath = ^"../Roads"
+@export var clock_path: NodePath = ^"../Clock"
 
 var shown := false
 
@@ -40,6 +41,7 @@ var _placer: Node
 var _mining: Mining
 var _hauling: Node
 var _roads: Node
+var _clock: Node
 
 
 func _ready() -> void:
@@ -48,6 +50,7 @@ func _ready() -> void:
 	_mining = get_node_or_null(mining_path)
 	_hauling = get_node_or_null(hauling_path)
 	_roads = get_node_or_null(roads_path)
+	_clock = get_node_or_null(clock_path)
 
 
 func set_shown(value: bool) -> void:
@@ -155,34 +158,34 @@ func _draw_route(route, time: float) -> void:
 		s += spacing
 
 
-## A factory's inputs on its left and products on its right, ringed by their stocks, with
-## arrows as thick as they go in / come out a day (on the factory's own clock).
+## A factory's inputs on one side and products on the other, ringed by their stocks, with
+## arrows as thick as they go in / come out a day.
 func _draw_factory(record: Dictionary, chip: float) -> void:
-	var state = record["state"]
-	var layout: FactoryLayout = state.layout
-	var now: float = state.flow.elapsed
+	var factory: LineFactory = record["factory"]
+	var day: float = _clock.seconds_per_day if _clock != null else 2.0
 	var inputs: Array = []
-	for good in layout.in_goods:
-		if good != "" and not inputs.has(good):
+	for good in LineFactory.INPUT_GOODS:
+		if factory.takes(good):
 			inputs.append(good)
-	var outputs: Array = layout.out_stock.keys()
-	for good in layout.produced:
-		if not outputs.has(good):
+	var outputs: Array = []
+	for good in LineFactory.OUTPUT_GOODS:
+		if factory.ready_amount(good) > 0 or factory.made.get(good, 0.0) > 0.01:
 			outputs.append(good)
 	var center: Vector2 = record["center"]
+	var half: Vector2 = record["obstacle"]["half"]
+	var reach := maxf(half.x, half.y) * 0.5
 	for k in inputs.size():
 		var good: String = inputs[k]
-		var at := center + Vector2(-58.0 - chip, (k - (inputs.size() - 1) * 0.5) * chip * 1.2)
-		var gates := layout.in_goods.count(good)
-		var rate: float = layout.consumed[good].per_day(now) if layout.consumed.has(good) else 0.0
-		_arrow(at + Vector2(chip * 0.55, 0.0), center + Vector2(-38.0, at.y - center.y), width_for(rate) if rate > 0.0 else 0.0)
-		_ringed_chip(good, at, chip, float(layout.in_amount(good)) / (gates * FactoryLayout.CAPACITY))
+		var at := center + Vector2(-reach - 20.0 - chip, (k - (inputs.size() - 1) * 0.5) * chip * 1.2)
+		var rate: float = factory.used.get(good, 0.0) * day
+		_arrow(at + Vector2(chip * 0.55, 0.0), center + Vector2(-reach, at.y - center.y), width_for(rate) if rate > 0.05 else 0.0)
+		_ringed_chip(good, at, chip, factory.inputs[good] / LineFactory.CAPACITY)
 	for k in outputs.size():
 		var good: String = outputs[k]
-		var at := center + Vector2(58.0 + chip, (k - (outputs.size() - 1) * 0.5) * chip * 1.2)
-		var rate: float = layout.produced[good].per_day(now) if layout.produced.has(good) else 0.0
-		_arrow(center + Vector2(38.0, at.y - center.y), at - Vector2(chip * 0.55, 0.0), width_for(rate) if rate > 0.0 else 0.0)
-		_ringed_chip(good, at, chip, float(layout.out_stock.get(good, 0)) / FactoryLayout.CAPACITY)
+		var at := center + Vector2(reach + 20.0 + chip, (k - (outputs.size() - 1) * 0.5) * chip * 1.2)
+		var rate: float = factory.made.get(good, 0.0) * day
+		_arrow(center + Vector2(reach, at.y - center.y), at - Vector2(chip * 0.55, 0.0), width_for(rate) if rate > 0.05 else 0.0)
+		_ringed_chip(good, at, chip, factory.outputs[good] / LineFactory.CAPACITY)
 
 
 ## A chip with a ring around it filled clockwise from the top by `fill` (0..1); red when nearly

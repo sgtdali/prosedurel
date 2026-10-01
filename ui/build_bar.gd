@@ -4,7 +4,7 @@ extends Control
 ## choosing an icon starts a placement preview on the map.
 
 const DepotVisual = preload("res://visuals/logistics_depot_visual.gd")
-const FactoryVisual = preload("res://visuals/production_factory_visual.gd")
+const FactoryVisual = preload("res://visuals/factory_campus_thumb.gd")
 const IronMineVisual = preload("res://visuals/iron_mine_visual.gd")
 const CopperMineVisual = preload("res://visuals/copper_mine_visual.gd")
 const CoalMineVisual = preload("res://visuals/coal_mine_visual.gd")
@@ -249,7 +249,7 @@ func _build_catalog() -> void:
 	_factory_items.add_theme_constant_override("separation", 12)
 	column.add_child(_factory_items)
 	# One building; what it makes is designed inside it
-	_factory_items.add_child(_item_button("Fabrika", "factory", FactoryVisual, 0.55))
+	_factory_items.add_child(_item_button("Fabrika", "factory", FactoryVisual, 0.34))
 	_catalog.resized.connect(_place)
 
 
@@ -502,8 +502,8 @@ func _building_details(kind: String) -> Dictionary:
 		"mine_storage":
 			details = {"title": "Maden Deposu", "description": "Menzilindeki madenlerin cevherini toplar, kamyonlara yükler.", "output": "%s/cevher" % Wallet.format(Mining.STORAGE_CAPACITY), "script": MineStorageVisual}
 		"factory":
-			details = {"title": "Fabrika", "description": "İçinde bantlarla üretim hattı kurulur. Kamyonlar hammadde getirir, ürünü alır.",
-				"output": "3 giriş · 2 çıkış", "script": FactoryVisual}
+			details = {"title": "Fabrika", "description": "Parsellerine çelik ya da parça hattı kurulur; yer varsa parsel satın alınıp büyür. Kamyonlar hammadde getirir, ürünü alır.",
+				"output": "4 parsel · en çok 8", "script": FactoryVisual, "scale": 0.62}
 		"sales_depot":
 			details = {"title": "Satış Deposu", "description": "Kasabanın istediği malları satar. Talebe kadar tam fiyat, fazlasına %25 ödenir. Kasaba büyüdükçe yeni ürün ister.",
 				"output": "Satış", "script": SalesDepotVisual}

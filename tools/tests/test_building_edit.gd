@@ -61,10 +61,9 @@ func _test() -> void:
 		return
 	placer._place_building()
 	var factory: Dictionary = placer.factory_records()[0]
-	var state = factory["state"]
-	state.machines.place("blast_furnace", Vector2i(8, 5), 0)
-	for x in 5:
-		state.grid.set_belt(Vector2i(x, 6), Vector2i(1, 0))
+	var lines = factory["factory"]
+	if not _check(lines.build(0, "steel"), "no steel line on the new factory"):
+		return
 	placer.building = false
 	var obstacles: int = roads.network.obstacles.size()
 	var access: int = roads.network.access_points.size()
@@ -110,23 +109,32 @@ func _test() -> void:
 	if not _check(depot["center"] == depot_center and roads.network.obstacles.size() == obstacles, "cancelled move changed the depot"):
 		return
 
-	# The factory moves with its inside and its badge.
+	# The factory moves with its lines.
 	var factory_center: Vector2 = factory["center"]
 	placer.start_move(factory)
 	if not _check(_find_site_near(factory_center, 150, 900, factory_center), "no spot to move the factory to"):
 		return
 	placer._place_building()
-	if not _check(factory["center"].distance_to(factory_center) > 50.0 and is_same(factory["state"], state) and state.machines.machines.size() == 1,
-			"factory not moved with its inside"):
+	if not _check(factory["center"].distance_to(factory_center) > 50.0 and is_same(factory["factory"], lines) and lines.lines[0].get("kind", "") == "steel",
+			"factory not moved with its lines"):
 		return
-	if not _check(factory["badge"].position.distance_to(factory["center"] + placer.BADGE_OFFSET) < 1.0, "the badge stayed behind"):
+	if not _check(placer.building_at(factory["center"]) == factory, "the factory is not found at its new place"):
+		return
+	# Buying a plot widens the campus away from the road when there is room.
+	var half: Vector2 = factory["obstacle"]["half"]
+	var problem: String = placer.grow_factory(factory)
+	if problem == "":
+		if not _check(lines.slots == 5 and factory["obstacle"]["half"].length() > half.length() and roads.network.obstacles.size() == obstacles,
+				"the campus did not widen: %d slots" % lines.slots):
+			return
+	elif not _check(lines.slots == 4 and roads.network.obstacles.size() == obstacles, "a refused plot changed the campus: " + problem):
 		return
 
 	# Removing: half the price back (a factory also its contents), obstacles and trucks go. A
 	# factory asks once more first.
 	money = wallet.money
 	var refund: int = placer.refund_of(factory)
-	if not _check(refund == placer.COSTS["factory"] / 2 + 1500 + 5 * 10, "factory refund %d" % refund):
+	if not _check(refund == placer.COSTS["factory"] / 2 + 11000 / 2 + lines.slots_bought() * 5000 / 2, "factory refund %d" % refund):
 		return
 	panel.select(factory)
 	panel.remove_selected()
@@ -146,7 +154,7 @@ func _test() -> void:
 	placer.remove_record(mine)
 	if not _check(mining.mines.is_empty() and placer.mine_records().is_empty(), "mine not removed"):
 		return
-	print("BUILDING_EDIT_OK yard moved ", old_center.round(), " -> ", yard["center"].round(), ", refund factory ", refund)
+	print("BUILDING_EDIT_OK plots ", lines.slots, " (", problem if problem != "" else "widened", "), yard moved ", old_center.round(), " -> ", yard["center"].round(), ", refund factory ", refund)
 
 
 func _check(ok: bool, what: String) -> bool:

@@ -4,17 +4,17 @@ extends Node2D
 ## and sales depots. A ghost follows the mouse, tinted by whether it may stand there (the reason
 ## goes to the hint); a click builds it and pays for it. Depots, yards, factories and sales
 ## depots face the nearest road and get an access road when one is close enough; a sales depot
-## goes inside a town's zone (towns/cities.gd), which it then sells to. A factory's record
-## carries its inside (`state`, a factory/factory_state.gd; economy/factories.gd runs them) and
-## the badge over it.
+## goes inside a town's zone (towns/cities.gd), which it then sells to. A factory is a campus of
+## line plots (visuals/factory_campus_map.gd); its record carries the lines and stocks
+## (`factory`, an economy/line_factory.gd; economy/factories.gd runs them), and buying a plot
+## widens it away from the road (grow_factory) when there is room.
 ## Built things can be found again (building_at), moved (start_move: the same ghost and rules,
 ## free) and removed (remove_record: half the price back, a factory also its contents);
 ## `building_removed` tells the trucks.
 
 const DepotVisual = preload("res://visuals/logistics_depot_visual.gd")
-const FactoryVisual = preload("res://visuals/production_factory_visual.gd")
-const FactoryBadge = preload("res://visuals/factory_badge.gd")
-const FactoryState = preload("res://factory/factory_state.gd")
+const CampusMap = preload("res://visuals/factory_campus_map.gd")
+const LineFactory = preload("res://economy/line_factory.gd")
 const IronMineVisual = preload("res://visuals/iron_mine_visual.gd")
 const CopperMineVisual = preload("res://visuals/copper_mine_visual.gd")
 const CoalMineVisual = preload("res://visuals/coal_mine_visual.gd")
@@ -31,11 +31,8 @@ const AccessMarker = preload("res://buildings/depot_access_marker.gd")
 const DEPOT_SCALE := 0.62
 const FOOTPRINT := Rect2(-51.0, -61.0, 115.0, 146.0)
 const ENTRY := Vector2(7.0, 85.0)
-const FACTORY_SCALE := 0.8
-const FACTORY_FOOTPRINT := FactoryVisual.SIZE
-const FACTORY_ENTRY := FactoryVisual.ENTRY
-## Where a factory's badge floats, above its centre
-const BADGE_OFFSET := Vector2(-10.0, -62.0)
+const FACTORY_SCALE := 0.62
+const FACTORY_ENTRY := CampusMap.ENTRY
 const AUTO_CONNECT_RANGE := 125.0
 const CLEARANCE := 3.0
 ## Largest gap between the points a site is checked at
@@ -292,7 +289,40 @@ func _placement_problem(at: Vector2, angle: float) -> String:
 
 
 func _factory_problem(at: Vector2, angle: float) -> String:
-	return _site_problem(at, angle, FACTORY_FOOTPRINT, FACTORY_SCALE)
+	return _site_problem(at, angle, _factory_footprint(), FACTORY_SCALE)
+
+
+## The campus being placed: a new one has the first plots, a moved one keeps its own
+func _factory_footprint() -> Rect2:
+	if _moving.get("kind", "") == "factory":
+		return _moving["visual"].current_footprint()
+	return CampusMap.footprint(LineFactory.START_SLOTS)
+
+
+## Buys `record`'s factory one more plot if the ground beyond it is free (and pays for it); the
+## campus and its obstacle widen away from the road. Returns why not, or "" when it did.
+func grow_factory(record: Dictionary) -> String:
+	var factory: LineFactory = record["factory"]
+	if factory.slots >= LineFactory.MAX_SLOTS:
+		return "En çok %d parsel" % LineFactory.MAX_SLOTS
+	if not factory.can_afford(LineFactory.SLOT_COST):
+		return "Para yetmiyor"
+	var visual: Node2D = record["visual"]
+	var now := CampusMap.footprint(factory.slots)
+	var after := CampusMap.footprint(factory.slots + 1)
+	var strip := Rect2(after.position, Vector2(after.size.x, now.position.y - after.position.y))
+	_roads.network.obstacles.erase(record["obstacle"])
+	var problem := _site_problem(visual.position, visual.rotation, strip, FACTORY_SCALE)
+	if problem == "" and not factory.open_slot():
+		problem = "Para yetmiyor"
+	if problem == "":
+		var geometry := _geometry("factory", visual.position, visual.rotation, visual)
+		record["center"] = geometry["center"]
+		record["obstacle"] = _roads.network.add_box(geometry["label"], geometry["center"], geometry["size"], visual.rotation, record["entry"])
+		buildings_changed.emit()
+	else:
+		_roads.network.obstacles.append(record["obstacle"])
+	return problem
 
 
 func _site_problem(at: Vector2, angle: float, footprint: Rect2, scale_factor: float) -> String:
@@ -550,7 +580,7 @@ func _is_mine() -> bool:
 
 func _new_visual(kind: String) -> Node2D:
 	match kind:
-		"factory": return FactoryVisual.new()
+		"factory": return CampusMap.new()
 		"iron_mine": return IronMineVisual.new()
 		"copper_mine": return CopperMineVisual.new()
 		"coal_mine": return CoalMineVisual.new()
@@ -597,26 +627,26 @@ func _place_factory() -> void:
 	if not _pay():
 		return
 	var entry := _access_entry_at(_cursor, _angle)
-	var factory := FactoryVisual.new()
+	var factory := CampusMap.new()
+	var lines := LineFactory.new()
+	lines.wallet = _wallet
+	factory.factory = lines
 	factory.position = _cursor
 	factory.rotation = _angle
 	factory.scale = Vector2.ONE * FACTORY_SCALE
 	factory.z_index = 2
 	add_child(factory)
 	factories.append(factory)
-	var center := _cursor + (FACTORY_FOOTPRINT.get_center() * FACTORY_SCALE).rotated(_angle)
-	var obstacle: Dictionary = _roads.network.add_box("fabrika", center, FACTORY_FOOTPRINT.size * FACTORY_SCALE, _angle, entry)
+	var footprint := factory.current_footprint()
+	var center := _cursor + (footprint.get_center() * FACTORY_SCALE).rotated(_angle)
+	var obstacle: Dictionary = _roads.network.add_box("fabrika", center, footprint.size * FACTORY_SCALE, _angle, entry)
 	_roads.network.access_points.append(entry)
 	var marker := AccessMarker.new()
 	marker.position = entry
 	marker.z_index = 4
 	add_child(marker)
-	var badge := FactoryBadge.new()
-	badge.position = center + BADGE_OFFSET
-	badge.z_index = 5
-	add_child(badge)
 	_factory_records.append({"kind": "factory", "entry": entry, "marker": marker, "visual": factory, "center": center, "obstacle": obstacle,
-		"state": FactoryState.new(), "badge": badge, "name": "Fabrika %d" % (_factory_records.size() + 1)})
+		"factory": lines, "name": "Fabrika %d" % (_factory_records.size() + 1)})
 	if not _connection_path.is_empty():
 		_roads.build_access_road(_connection_path)
 	else:
@@ -713,11 +743,12 @@ func _inside_box(obstacle: Dictionary, point: Vector2) -> bool:
 	return absf(local.x) <= half.x and absf(local.y) <= half.y
 
 
-## Half the price back; a factory also pays back its contents (belts in full, machines half).
+## Half the price back; a factory also half of its lines and of the plots it bought.
 func refund_of(record: Dictionary) -> int:
 	var total := int(COSTS.get(build_kind(record), 0) * 0.5)
-	if record.has("state"):
-		total += (record["state"] as FactoryState).contents_refund()
+	if record.has("factory"):
+		var factory: LineFactory = record["factory"]
+		total += factory.contents_refund() + factory.slots_bought() * LineFactory.SLOT_COST / 2
 	# A logistics depot's trucks (economy/hauling.gd keeps it up to date)
 	total += record.get("fleet_value", 0)
 	return total
@@ -734,8 +765,6 @@ func remove_record(record: Dictionary) -> int:
 			_roads.network.access_points.remove_at(index)
 	if record.has("marker"):
 		record["marker"].queue_free()
-	if record.has("badge"):
-		record["badge"].queue_free()
 	var visual: Node2D = record["visual"]
 	for list in [_mine_records, _depot_records, _storage_records, _factory_records, _sales_records]:
 		list.erase(record)
@@ -803,8 +832,6 @@ func _finish_move() -> void:
 		_roads.network.access_points.append(record["entry"])
 		record["marker"].position = record["entry"]
 		record["marker"].visible = true
-	if record.has("badge"):
-		record["badge"].position = record["center"] + BADGE_OFFSET
 	match kind:
 		"mine": _mining.move_mine(visual, record["center"])
 		"yard": _mining.move_storage(visual, record["center"])
@@ -832,7 +859,8 @@ func _geometry(kind: String, at: Vector2, angle: float, visual: Node2D) -> Dicti
 			return {"center": at + (SalesDepotVisual.SIZE.get_center() * DEPOT_SCALE).rotated(angle), "size": SalesDepotVisual.SIZE.size * DEPOT_SCALE,
 				"label": "satış deposu", "entry": at + (SalesDepotVisual.ENTRY * DEPOT_SCALE).rotated(angle)}
 		"factory":
-			return {"center": at + (FACTORY_FOOTPRINT.get_center() * FACTORY_SCALE).rotated(angle), "size": FACTORY_FOOTPRINT.size * FACTORY_SCALE,
+			var footprint: Rect2 = visual.current_footprint()
+			return {"center": at + (footprint.get_center() * FACTORY_SCALE).rotated(angle), "size": footprint.size * FACTORY_SCALE,
 				"label": "fabrika", "entry": at + (FACTORY_ENTRY * FACTORY_SCALE).rotated(angle)}
 		_:
 			return {"center": at + (FOOTPRINT.get_center() * DEPOT_SCALE).rotated(angle), "size": FOOTPRINT.size * DEPOT_SCALE,
