@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://ck87uugdwokj0"]
+
+[ext_resource type="Script" path="res://large_world_map.gd" id="1_world"]
+
+[node name="ProceduralWorldMap" type="Node2D" unique_id=1350135583]
+script = ExtResource("1_world")

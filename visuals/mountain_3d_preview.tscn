@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://dt6uuadvh3fka"]
+
+[ext_resource type="Script" uid="uid://bfw0rf678kvnl" path="res://visuals/mountain_3d_study.gd" id="1_m3d"]
+
+[node name="Mountain3DPreview" type="Node2D" unique_id=632218142]
+position = Vector2(800, 450)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=128796593]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-1000, -800, 1000, -800, 1000, 800, -1000, 800)
+
+[node name="Mountain3DStudy" type="Node2D" parent="." unique_id=1871769342]
+scale = Vector2(0.58, 0.58)
+script = ExtResource("1_m3d")
+points = PackedVector2Array(260, -560, 170, -330, 60, -100, -60, 140, -150, 360, -240, 560)
+widths = PackedFloat32Array(110, 90, 135, 100, 125, 115)
+peak_count = 6
+width_scale = 2.0
+tree_density = 0.1

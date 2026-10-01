@@ -1,0 +1,49 @@
+[gd_scene format=3 uid="uid://cpvsu2uhlhl7g"]
+
+[ext_resource type="Script" path="res://sandbox/facility_sandbox.gd" id="1_sandbox"]
+[ext_resource type="Script" uid="uid://d1ph5t358gwro" path="res://economy/game_clock.gd" id="2_clock"]
+[ext_resource type="Script" uid="uid://bpn6kppstf0mf" path="res://economy/wallet.gd" id="3_wallet"]
+[ext_resource type="Script" uid="uid://dqwbjofb3y85" path="res://ui/money_panel.gd" id="4_money"]
+[ext_resource type="Script" uid="uid://07mt702odr7f" path="res://ui/date_panel.gd" id="5_date"]
+[ext_resource type="Script" uid="uid://q1ater6r3kk5" path="res://ui/speed_panel.gd" id="6_speed"]
+
+[node name="FacilitySandbox" type="Node2D" unique_id=505599351]
+script = ExtResource("1_sandbox")
+
+[node name="Clock" type="Node" parent="." unique_id=1052930594]
+script = ExtResource("2_clock")
+
+[node name="Wallet" type="Node" parent="." unique_id=813653616]
+script = ExtResource("3_wallet")
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1667945922]
+
+[node name="MoneyPanel" type="Control" parent="HUD" unique_id=2038610447]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_money")
+
+[node name="DatePanel" type="Control" parent="HUD" unique_id=374738985]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_date")
+
+[node name="SpeedPanel" type="Control" parent="HUD" unique_id=1859168732]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("6_speed")

@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://bvid3otutx56g"]
+
+[ext_resource type="Script" path="res://mountain_range_study.gd" id="1_range"]
+
+[node name="MountainRangePreview" type="Node2D" unique_id=1021653729]
+position = Vector2(800, 450)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=1703766754]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-1000, -800, 1000, -800, 1000, 800, -1000, 800)
+
+[node name="MountainRangeVisual" type="Node2D" parent="." unique_id=1311478812]
+scale = Vector2(0.6, 0.6)
+script = ExtResource("1_range")
+points = PackedVector2Array(260, -560, 170, -330, 60, -100, -60, 140, -150, 360, -240, 560)
+widths = PackedFloat32Array(110, 90, 135, 100, 125, 115)
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=788412017]

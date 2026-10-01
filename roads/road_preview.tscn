@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://cf8nw0bqnr0pt"]
+
+[ext_resource type="Script" uid="uid://v78qxceg4xnk" path="res://roads/road_visual.gd" id="1_road"]
+
+[node name="RoadPreview" type="Node2D" unique_id=589786820]
+position = Vector2(757, 441)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=920415661]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-460, -390, 460, -390, 460, 390, -460, 390)
+
+[node name="RoadVisual" type="Node2D" parent="." unique_id=293916973]
+scale = Vector2(2, 2)
+script = ExtResource("1_road")
+points = PackedVector2Array()
+preview_length = 400.0
+preview_amplitude = 60.0

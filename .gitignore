@@ -1,0 +1,20 @@
+# Godot generated cache
+.godot/
+
+# Local tool settings
+.claude/
+.idea/
+.vscode/
+
+# Runtime logs and local secrets
+*.log
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Operating system files
+Thumbs.db
+.DS_Store
+desktop.ini

@@ -1,0 +1,357 @@
+[gd_scene format=3 uid="uid://dqn0dt41kku45"]
+
+[ext_resource type="Script" path="res://map_camera.gd" id="camera_script"]
+[ext_resource type="Script" path="res://cities.gd" id="cities_script"]
+[ext_resource type="Script" path="res://road_painter.gd" id="road_script"]
+[ext_resource type="Texture2D" uid="uid://rth5rnk83ex1" path="res://baked/terrain_full/tile_0_0.png" id="tex_0"]
+[ext_resource type="Texture2D" uid="uid://le4q42itb4oj" path="res://baked/terrain_full/tile_1_0.png" id="tex_1"]
+[ext_resource type="Texture2D" uid="uid://cw5kpkft6vy7u" path="res://baked/terrain_full/tile_2_0.png" id="tex_2"]
+[ext_resource type="Texture2D" uid="uid://7lo1jkuxvv5h" path="res://baked/terrain_full/tile_3_0.png" id="tex_3"]
+[ext_resource type="Texture2D" uid="uid://dkboptvf7eirp" path="res://baked/terrain_full/tile_4_0.png" id="tex_4"]
+[ext_resource type="Texture2D" uid="uid://1i2w2pj3qbdg" path="res://baked/terrain_full/tile_5_0.png" id="tex_5"]
+[ext_resource type="Texture2D" uid="uid://cqskde7ppvgqk" path="res://baked/terrain_full/tile_6_0.png" id="tex_6"]
+[ext_resource type="Texture2D" uid="uid://dwcrhtc8anvht" path="res://baked/terrain_full/tile_0_1.png" id="tex_7"]
+[ext_resource type="Texture2D" uid="uid://5wqkiro4sc2r" path="res://baked/terrain_full/tile_1_1.png" id="tex_8"]
+[ext_resource type="Texture2D" uid="uid://chx0neg38y6dr" path="res://baked/terrain_full/tile_2_1.png" id="tex_9"]
+[ext_resource type="Texture2D" uid="uid://dtty7ynnp5j4i" path="res://baked/terrain_full/tile_3_1.png" id="tex_10"]
+[ext_resource type="Texture2D" uid="uid://s2xbqsxt837r" path="res://baked/terrain_full/tile_4_1.png" id="tex_11"]
+[ext_resource type="Texture2D" uid="uid://bjy8ul8hh1lxx" path="res://baked/terrain_full/tile_5_1.png" id="tex_12"]
+[ext_resource type="Texture2D" uid="uid://u7hrv6rq6n5t" path="res://baked/terrain_full/tile_6_1.png" id="tex_13"]
+[ext_resource type="Texture2D" uid="uid://dajjwfpstr6da" path="res://baked/terrain_full/tile_0_2.png" id="tex_14"]
+[ext_resource type="Texture2D" uid="uid://bf23xbmkk6c33" path="res://baked/terrain_full/tile_1_2.png" id="tex_15"]
+[ext_resource type="Texture2D" uid="uid://csiv57t2424fo" path="res://baked/terrain_full/tile_2_2.png" id="tex_16"]
+[ext_resource type="Texture2D" uid="uid://cc5invj4jeqke" path="res://baked/terrain_full/tile_3_2.png" id="tex_17"]
+[ext_resource type="Texture2D" uid="uid://cb0q4ebfewfhd" path="res://baked/terrain_full/tile_4_2.png" id="tex_18"]
+[ext_resource type="Texture2D" uid="uid://dat2uybnmbkmu" path="res://baked/terrain_full/tile_5_2.png" id="tex_19"]
+[ext_resource type="Texture2D" uid="uid://bm3uq86jq2j34" path="res://baked/terrain_full/tile_6_2.png" id="tex_20"]
+[ext_resource type="Texture2D" uid="uid://dig6ukadih3b8" path="res://baked/terrain_full/tile_0_3.png" id="tex_21"]
+[ext_resource type="Texture2D" uid="uid://b7s5rqr2cvig" path="res://baked/terrain_full/tile_1_3.png" id="tex_22"]
+[ext_resource type="Texture2D" uid="uid://bc87a5svibxhp" path="res://baked/terrain_full/tile_2_3.png" id="tex_23"]
+[ext_resource type="Texture2D" uid="uid://241cvnxdqf3v" path="res://baked/terrain_full/tile_3_3.png" id="tex_24"]
+[ext_resource type="Texture2D" uid="uid://b8qiq28c52dcm" path="res://baked/terrain_full/tile_4_3.png" id="tex_25"]
+[ext_resource type="Texture2D" uid="uid://omkxex6dbdtv" path="res://baked/terrain_full/tile_5_3.png" id="tex_26"]
+[ext_resource type="Texture2D" uid="uid://liyoapwcyy53" path="res://baked/terrain_full/tile_6_3.png" id="tex_27"]
+[ext_resource type="Texture2D" uid="uid://dxiqgxeh8frlc" path="res://baked/terrain_full/tile_0_4.png" id="tex_28"]
+[ext_resource type="Texture2D" uid="uid://dtq0h01oyoktr" path="res://baked/terrain_full/tile_1_4.png" id="tex_29"]
+[ext_resource type="Texture2D" uid="uid://bbdbbaarnba6h" path="res://baked/terrain_full/tile_2_4.png" id="tex_30"]
+[ext_resource type="Texture2D" uid="uid://bwd7xolcplj2l" path="res://baked/terrain_full/tile_3_4.png" id="tex_31"]
+[ext_resource type="Texture2D" uid="uid://ciltd2r6ps6ey" path="res://baked/terrain_full/tile_4_4.png" id="tex_32"]
+[ext_resource type="Texture2D" uid="uid://cqf5vjoniilfs" path="res://baked/terrain_full/tile_5_4.png" id="tex_33"]
+[ext_resource type="Texture2D" uid="uid://dtt5ttr0v7lll" path="res://baked/terrain_full/tile_6_4.png" id="tex_34"]
+[ext_resource type="Texture2D" uid="uid://bq61f7ykrld5y" path="res://baked/factory.png" id="tex_36"]
+
+[node name="PngMap" type="Node2D" unique_id=1817470064]
+
+[node name="Terrain" type="Node2D" parent="." unique_id=447027907]
+
+[node name="A1" type="Sprite2D" parent="Terrain" unique_id=1586139019]
+texture_filter = 4
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_0")
+centered = false
+
+[node name="B1" type="Sprite2D" parent="Terrain" unique_id=1032506466]
+texture_filter = 4
+position = Vector2(800, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_1")
+centered = false
+
+[node name="C1" type="Sprite2D" parent="Terrain" unique_id=511039867]
+texture_filter = 4
+position = Vector2(1600, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_2")
+centered = false
+
+[node name="D1" type="Sprite2D" parent="Terrain" unique_id=146856378]
+texture_filter = 4
+position = Vector2(2400, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_3")
+centered = false
+
+[node name="E1" type="Sprite2D" parent="Terrain" unique_id=2029179908]
+texture_filter = 4
+position = Vector2(3200, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_4")
+centered = false
+
+[node name="F1" type="Sprite2D" parent="Terrain" unique_id=837625935]
+texture_filter = 4
+position = Vector2(4000, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_5")
+centered = false
+
+[node name="G1" type="Sprite2D" parent="Terrain" unique_id=1364365113]
+texture_filter = 4
+position = Vector2(4800, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_6")
+centered = false
+
+[node name="A2" type="Sprite2D" parent="Terrain" unique_id=1123229010]
+texture_filter = 4
+position = Vector2(0, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_7")
+centered = false
+
+[node name="B2" type="Sprite2D" parent="Terrain" unique_id=306917534]
+texture_filter = 4
+position = Vector2(800, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_8")
+centered = false
+
+[node name="C2" type="Sprite2D" parent="Terrain" unique_id=1102531551]
+texture_filter = 4
+position = Vector2(1600, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_9")
+centered = false
+
+[node name="D2" type="Sprite2D" parent="Terrain" unique_id=526806600]
+texture_filter = 4
+position = Vector2(2400, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_10")
+centered = false
+
+[node name="E2" type="Sprite2D" parent="Terrain" unique_id=900377947]
+texture_filter = 4
+position = Vector2(3200, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_11")
+centered = false
+
+[node name="F2" type="Sprite2D" parent="Terrain" unique_id=1536233678]
+texture_filter = 4
+position = Vector2(4000, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_12")
+centered = false
+
+[node name="G2" type="Sprite2D" parent="Terrain" unique_id=945272765]
+texture_filter = 4
+position = Vector2(4800, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_13")
+centered = false
+
+[node name="A3" type="Sprite2D" parent="Terrain" unique_id=1118369581]
+texture_filter = 4
+position = Vector2(0, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_14")
+centered = false
+
+[node name="B3" type="Sprite2D" parent="Terrain" unique_id=395438253]
+texture_filter = 4
+position = Vector2(800, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_15")
+centered = false
+
+[node name="C3" type="Sprite2D" parent="Terrain" unique_id=2048551235]
+texture_filter = 4
+position = Vector2(1600, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_16")
+centered = false
+
+[node name="D3" type="Sprite2D" parent="Terrain" unique_id=1950958834]
+texture_filter = 4
+position = Vector2(2400, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_17")
+centered = false
+
+[node name="E3" type="Sprite2D" parent="Terrain" unique_id=2116345420]
+texture_filter = 4
+position = Vector2(3200, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_18")
+centered = false
+
+[node name="F3" type="Sprite2D" parent="Terrain" unique_id=224139035]
+texture_filter = 4
+position = Vector2(4000, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_19")
+centered = false
+
+[node name="G3" type="Sprite2D" parent="Terrain" unique_id=1655789858]
+texture_filter = 4
+position = Vector2(4800, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_20")
+centered = false
+
+[node name="A4" type="Sprite2D" parent="Terrain" unique_id=2042804663]
+texture_filter = 4
+position = Vector2(0, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_21")
+centered = false
+
+[node name="B4" type="Sprite2D" parent="Terrain" unique_id=2024174319]
+texture_filter = 4
+position = Vector2(800, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_22")
+centered = false
+
+[node name="C4" type="Sprite2D" parent="Terrain" unique_id=935551887]
+texture_filter = 4
+position = Vector2(1600, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_23")
+centered = false
+
+[node name="D4" type="Sprite2D" parent="Terrain" unique_id=628550341]
+texture_filter = 4
+position = Vector2(2400, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_24")
+centered = false
+
+[node name="E4" type="Sprite2D" parent="Terrain" unique_id=1770468266]
+texture_filter = 4
+position = Vector2(3200, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_25")
+centered = false
+
+[node name="F4" type="Sprite2D" parent="Terrain" unique_id=972968890]
+texture_filter = 4
+position = Vector2(4000, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_26")
+centered = false
+
+[node name="G4" type="Sprite2D" parent="Terrain" unique_id=1431449069]
+texture_filter = 4
+position = Vector2(4800, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_27")
+centered = false
+
+[node name="A5" type="Sprite2D" parent="Terrain" unique_id=1138261581]
+texture_filter = 4
+position = Vector2(0, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_28")
+centered = false
+
+[node name="B5" type="Sprite2D" parent="Terrain" unique_id=1347132644]
+texture_filter = 4
+position = Vector2(800, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_29")
+centered = false
+
+[node name="C5" type="Sprite2D" parent="Terrain" unique_id=2137656649]
+texture_filter = 4
+position = Vector2(1600, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_30")
+centered = false
+
+[node name="D5" type="Sprite2D" parent="Terrain" unique_id=150714737]
+texture_filter = 4
+position = Vector2(2400, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_31")
+centered = false
+
+[node name="E5" type="Sprite2D" parent="Terrain" unique_id=1145156322]
+texture_filter = 4
+position = Vector2(3200, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_32")
+centered = false
+
+[node name="F5" type="Sprite2D" parent="Terrain" unique_id=1400718255]
+texture_filter = 4
+position = Vector2(4000, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_33")
+centered = false
+
+[node name="G5" type="Sprite2D" parent="Terrain" unique_id=686354078]
+texture_filter = 4
+position = Vector2(4800, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_34")
+centered = false
+
+[node name="Roads" type="Node2D" parent="." unique_id=482653950]
+script = ExtResource("road_script")
+
+[node name="Factories" type="Node2D" parent="." unique_id=908269863]
+
+[node name="Factory1" type="Sprite2D" parent="Factories" unique_id=1509460369]
+texture_filter = 4
+position = Vector2(1151.8, 159.1)
+rotation = -0.203
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_36")
+offset = Vector2(28, 14)
+
+[node name="Factory2" type="Sprite2D" parent="Factories" unique_id=1963177496]
+texture_filter = 4
+position = Vector2(3314.4, 238.3)
+rotation = 0.499
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_36")
+offset = Vector2(28, 14)
+
+[node name="Factory3" type="Sprite2D" parent="Factories" unique_id=668127100]
+texture_filter = 4
+position = Vector2(5318.6, 211.1)
+rotation = -0.09
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_36")
+offset = Vector2(28, 14)
+
+[node name="Factory4" type="Sprite2D" parent="Factories" unique_id=1653373353]
+texture_filter = 4
+position = Vector2(2301.4, 2251.2)
+rotation = -0.417
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_36")
+offset = Vector2(28, 14)
+
+[node name="Factory5" type="Sprite2D" parent="Factories" unique_id=615918891]
+texture_filter = 4
+position = Vector2(4592.2, 2296.4)
+rotation = 0.364
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_36")
+offset = Vector2(28, 14)
+
+[node name="Factory6" type="Sprite2D" parent="Factories" unique_id=1639165487]
+texture_filter = 4
+position = Vector2(4690.9, 2522.9)
+rotation = 0.469
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_36")
+offset = Vector2(28, 14)
+
+[node name="Factory7" type="Sprite2D" parent="Factories" unique_id=1093116807]
+texture_filter = 4
+position = Vector2(2532, 3475.3)
+rotation = -0.134
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_36")
+offset = Vector2(28, 14)
+
+[node name="Cities" type="Node2D" parent="." unique_id=279962126]
+script = ExtResource("cities_script")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1316624659]
+position = Vector2(2800, 1800)
+script = ExtResource("camera_script")

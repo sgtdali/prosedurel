@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://dt8hb2sknp34m"]
+
+[ext_resource type="Script" uid="uid://wmevf8qfw3m8" path="res://visuals/forest_visual.gd" id="1_forest"]
+
+[node name="ForestPreview" type="Node2D" unique_id=1109295062]
+position = Vector2(693, 411)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=936361491]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-460, -390, 460, -390, 460, 390, -460, 390)
+
+[node name="ForestVisual" type="Node2D" parent="." unique_id=1237216454]
+scale = Vector2(1.6, 1.6)
+script = ExtResource("1_forest")
+forest_seed = 90411

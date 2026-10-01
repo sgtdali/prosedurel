@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://visuals/sales_depot_visual.gd" id="1_sales"]
+[ext_resource type="Script" path="res://visuals/logistics_depot_visual.gd" id="2_depot"]
+[ext_resource type="Script" path="res://visuals/mine_storage_visual.gd" id="3_yard"]
+[ext_resource type="Script" path="res://visuals/house_visual.gd" id="4_house"]
+
+[node name="SalesDepotPreview" type="Node2D"]
+position = Vector2(800, 450)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="."]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-800, -450, 800, -450, 800, 450, -800, 450)
+
+[node name="SalesDepot" type="Node2D" parent="."]
+position = Vector2(-80, -20)
+scale = Vector2(2.9, 2.9)
+script = ExtResource("1_sales")
+
+[node name="MapScale" type="Node2D" parent="."]
+position = Vector2(-600, 0)
+
+[node name="SalesSmall" type="Node2D" parent="MapScale"]
+position = Vector2(0, -230)
+scale = Vector2(0.9, 0.9)
+script = ExtResource("1_sales")
+
+[node name="DepotSmall" type="Node2D" parent="MapScale"]
+position = Vector2(0, 20)
+scale = Vector2(0.9, 0.9)
+script = ExtResource("2_depot")
+
+[node name="YardSmall" type="Node2D" parent="MapScale"]
+position = Vector2(0, 250)
+scale = Vector2(0.9, 0.9)
+script = ExtResource("3_yard")
+
+[node name="House1" type="Node2D" parent="."]
+position = Vector2(520, -120)
+scale = Vector2(0.55, 0.55)
+script = ExtResource("4_house")
+house_seed = 7
+
+[node name="House2" type="Node2D" parent="."]
+position = Vector2(600, -40)
+scale = Vector2(0.55, 0.55)
+script = ExtResource("4_house")
+house_seed = 21

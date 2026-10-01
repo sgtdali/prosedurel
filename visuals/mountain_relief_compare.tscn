@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://visuals/mountain_range_study.gd" id="1_current"]
+[ext_resource type="Script" path="res://visuals/mountain_relief_study.gd" id="2_relief"]
+
+[node name="MountainReliefCompare" type="Node2D"]
+position = Vector2(800, 450)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="."]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-800, -450, 800, -450, 800, 450, -800, 450)
+
+[node name="CurrentSection" type="Node2D" parent="."]
+position = Vector2(-380, 25)
+
+[node name="Visual" type="Node2D" parent="CurrentSection"]
+scale = Vector2(0.52, 0.52)
+script = ExtResource("1_current")
+points = PackedVector2Array(260, -560, 170, -330, 60, -100, -60, 140, -150, 360, -240, 560)
+widths = PackedFloat32Array(110, 90, 135, 100, 125, 115)
+steepness = 1.1
+
+[node name="ReliefSection" type="Node2D" parent="."]
+position = Vector2(380, 25)
+
+[node name="Visual" type="Node2D" parent="ReliefSection"]
+scale = Vector2(0.52, 0.52)
+script = ExtResource("2_relief")
+points = PackedVector2Array(260, -560, 170, -330, 60, -100, -60, 140, -150, 360, -240, 560)
+widths = PackedFloat32Array(110, 90, 135, 100, 125, 115)
+peak_count = 4
+
+[node name="TitleBar" type="Polygon2D" parent="."]
+color = Color(0.18, 0.22, 0.25, 0.88)
+polygon = PackedVector2Array(-780, -420, 780, -420, 780, -350, -780, -350)
+
+[node name="CurrentLabel" type="Label" parent="."]
+offset_left = -700.0
+offset_top = -405.0
+offset_right = -60.0
+offset_bottom = -365.0
+theme_override_colors/font_color = Color(0.85, 0.88, 0.92, 1)
+theme_override_font_sizes/font_size = 24
+text = "MEVCUT SIRADAĞ (EXTRUDED TUBE)"
+horizontal_alignment = 1
+
+[node name="ReliefLabel" type="Label" parent="."]
+offset_left = 60.0
+offset_top = -405.0
+offset_right = 700.0
+offset_bottom = -365.0
+theme_override_colors/font_color = Color(0.95, 0.85, 0.55, 1)
+theme_override_font_sizes/font_size = 24
+text = "ÖNERİ: İSVİÇRE KABARTMA (SWISS SHADED RELIEF)"
+horizontal_alignment = 1
+

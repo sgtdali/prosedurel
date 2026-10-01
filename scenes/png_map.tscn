@@ -1,0 +1,605 @@
+[gd_scene format=3 uid="uid://cndf5g0tpcgjr"]
+
+[ext_resource type="Script" uid="uid://chb0v5dneqr43" path="res://ui/build_bar.gd" id="build_bar_script"]
+[ext_resource type="Script" uid="uid://cvoltsflxvm6t" path="res://ui/build_help.gd" id="build_help_script"]
+[ext_resource type="Script" uid="uid://b7xyqr2lglilr" path="res://map/map_camera.gd" id="camera_script"]
+[ext_resource type="Script" uid="uid://b72wsy5152mt7" path="res://towns/cities.gd" id="cities_script"]
+[ext_resource type="Script" uid="uid://bgg58dp2vm4dt" path="res://buildings/depot_placer.gd" id="depot_placer_script"]
+[ext_resource type="Script" uid="uid://dqwbjofb3y85" path="res://ui/money_panel.gd" id="money_panel_script"]
+[ext_resource type="Script" uid="uid://bfw0rf678kvnl" path="res://visuals/mountain_3d_study.gd" id="mountain_3d_script"]
+[ext_resource type="Script" path="res://visuals/forest_3d_study.gd" id="forest_3d_script"]
+[ext_resource type="Script" uid="uid://duf1xgykv52j2" path="res://roads/road_painter.gd" id="road_script"]
+[ext_resource type="Texture2D" uid="uid://rth5rnk83ex1" path="res://baked/terrain_full/tile_0_0.png" id="tex_0"]
+[ext_resource type="Texture2D" uid="uid://le4q42itb4oj" path="res://baked/terrain_full/tile_1_0.png" id="tex_1"]
+[ext_resource type="Texture2D" uid="uid://cw5kpkft6vy7u" path="res://baked/terrain_full/tile_2_0.png" id="tex_2"]
+[ext_resource type="Texture2D" uid="uid://7lo1jkuxvv5h" path="res://baked/terrain_full/tile_3_0.png" id="tex_3"]
+[ext_resource type="Texture2D" uid="uid://dkboptvf7eirp" path="res://baked/terrain_full/tile_4_0.png" id="tex_4"]
+[ext_resource type="Texture2D" uid="uid://1i2w2pj3qbdg" path="res://baked/terrain_full/tile_5_0.png" id="tex_5"]
+[ext_resource type="Texture2D" uid="uid://cqskde7ppvgqk" path="res://baked/terrain_full/tile_6_0.png" id="tex_6"]
+[ext_resource type="Texture2D" uid="uid://dwcrhtc8anvht" path="res://baked/terrain_full/tile_0_1.png" id="tex_7"]
+[ext_resource type="Texture2D" uid="uid://5wqkiro4sc2r" path="res://baked/terrain_full/tile_1_1.png" id="tex_8"]
+[ext_resource type="Texture2D" uid="uid://chx0neg38y6dr" path="res://baked/terrain_full/tile_2_1.png" id="tex_9"]
+[ext_resource type="Texture2D" uid="uid://dtty7ynnp5j4i" path="res://baked/terrain_full/tile_3_1.png" id="tex_10"]
+[ext_resource type="Texture2D" uid="uid://s2xbqsxt837r" path="res://baked/terrain_full/tile_4_1.png" id="tex_11"]
+[ext_resource type="Texture2D" uid="uid://bjy8ul8hh1lxx" path="res://baked/terrain_full/tile_5_1.png" id="tex_12"]
+[ext_resource type="Texture2D" uid="uid://u7hrv6rq6n5t" path="res://baked/terrain_full/tile_6_1.png" id="tex_13"]
+[ext_resource type="Texture2D" uid="uid://dajjwfpstr6da" path="res://baked/terrain_full/tile_0_2.png" id="tex_14"]
+[ext_resource type="Texture2D" uid="uid://bf23xbmkk6c33" path="res://baked/terrain_full/tile_1_2.png" id="tex_15"]
+[ext_resource type="Texture2D" uid="uid://csiv57t2424fo" path="res://baked/terrain_full/tile_2_2.png" id="tex_16"]
+[ext_resource type="Texture2D" uid="uid://cc5invj4jeqke" path="res://baked/terrain_full/tile_3_2.png" id="tex_17"]
+[ext_resource type="Texture2D" uid="uid://cb0q4ebfewfhd" path="res://baked/terrain_full/tile_4_2.png" id="tex_18"]
+[ext_resource type="Texture2D" uid="uid://dat2uybnmbkmu" path="res://baked/terrain_full/tile_5_2.png" id="tex_19"]
+[ext_resource type="Texture2D" uid="uid://bm3uq86jq2j34" path="res://baked/terrain_full/tile_6_2.png" id="tex_20"]
+[ext_resource type="Texture2D" uid="uid://dig6ukadih3b8" path="res://baked/terrain_full/tile_0_3.png" id="tex_21"]
+[ext_resource type="Texture2D" uid="uid://b7s5rqr2cvig" path="res://baked/terrain_full/tile_1_3.png" id="tex_22"]
+[ext_resource type="Texture2D" uid="uid://bc87a5svibxhp" path="res://baked/terrain_full/tile_2_3.png" id="tex_23"]
+[ext_resource type="Texture2D" uid="uid://241cvnxdqf3v" path="res://baked/terrain_full/tile_3_3.png" id="tex_24"]
+[ext_resource type="Texture2D" uid="uid://b8qiq28c52dcm" path="res://baked/terrain_full/tile_4_3.png" id="tex_25"]
+[ext_resource type="Texture2D" uid="uid://omkxex6dbdtv" path="res://baked/terrain_full/tile_5_3.png" id="tex_26"]
+[ext_resource type="Texture2D" uid="uid://liyoapwcyy53" path="res://baked/terrain_full/tile_6_3.png" id="tex_27"]
+[ext_resource type="Texture2D" uid="uid://dxiqgxeh8frlc" path="res://baked/terrain_full/tile_0_4.png" id="tex_28"]
+[ext_resource type="Texture2D" uid="uid://dtq0h01oyoktr" path="res://baked/terrain_full/tile_1_4.png" id="tex_29"]
+[ext_resource type="Texture2D" uid="uid://bbdbbaarnba6h" path="res://baked/terrain_full/tile_2_4.png" id="tex_30"]
+[ext_resource type="Texture2D" uid="uid://bwd7xolcplj2l" path="res://baked/terrain_full/tile_3_4.png" id="tex_31"]
+[ext_resource type="Texture2D" uid="uid://ciltd2r6ps6ey" path="res://baked/terrain_full/tile_4_4.png" id="tex_32"]
+[ext_resource type="Texture2D" uid="uid://cqf5vjoniilfs" path="res://baked/terrain_full/tile_5_4.png" id="tex_33"]
+[ext_resource type="Texture2D" uid="uid://dtt5ttr0v7lll" path="res://baked/terrain_full/tile_6_4.png" id="tex_34"]
+[ext_resource type="Script" uid="uid://v8f67xku2ca3" path="res://traffic/traffic.gd" id="traffic_script"]
+[ext_resource type="Script" uid="uid://bpn6kppstf0mf" path="res://economy/wallet.gd" id="wallet_script"]
+[ext_resource type="Script" path="res://economy/game_clock.gd" id="clock_script"]
+[ext_resource type="Script" path="res://economy/mining.gd" id="mining_script"]
+[ext_resource type="Script" path="res://economy/hauling.gd" id="hauling_script"]
+[ext_resource type="Script" path="res://economy/factories.gd" id="factories_script"]
+[ext_resource type="Script" path="res://ui/factory_view.gd" id="factory_view_script"]
+[ext_resource type="Script" path="res://ui/depot_panel.gd" id="depot_panel_script"]
+[ext_resource type="Script" path="res://ui/building_panel.gd" id="building_panel_script"]
+[ext_resource type="Script" path="res://ui/date_panel.gd" id="date_panel_script"]
+[ext_resource type="Script" path="res://ui/speed_panel.gd" id="speed_panel_script"]
+[ext_resource type="Script" path="res://ui/routes_panel.gd" id="routes_panel_script"]
+[ext_resource type="Script" path="res://ui/map_signs.gd" id="map_signs_script"]
+[ext_resource type="Script" path="res://ui/map_overlay.gd" id="map_overlay_script"]
+[ext_resource type="Script" path="res://economy/town_demand.gd" id="town_demand_script"]
+[ext_resource type="Script" path="res://ui/town_panel.gd" id="town_panel_script"]
+
+[node name="PngMap" type="Node2D" unique_id=766230843]
+
+[node name="Terrain" type="Node2D" parent="." unique_id=492673418]
+
+[node name="A1" type="Sprite2D" parent="Terrain" unique_id=226803762]
+texture_filter = 4
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_0")
+centered = false
+
+[node name="B1" type="Sprite2D" parent="Terrain" unique_id=1690733666]
+texture_filter = 4
+position = Vector2(800, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_1")
+centered = false
+
+[node name="C1" type="Sprite2D" parent="Terrain" unique_id=240173198]
+texture_filter = 4
+position = Vector2(1600, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_2")
+centered = false
+
+[node name="D1" type="Sprite2D" parent="Terrain" unique_id=873189014]
+texture_filter = 4
+position = Vector2(2400, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_3")
+centered = false
+
+[node name="E1" type="Sprite2D" parent="Terrain" unique_id=1415975686]
+texture_filter = 4
+position = Vector2(3200, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_4")
+centered = false
+
+[node name="F1" type="Sprite2D" parent="Terrain" unique_id=309420193]
+texture_filter = 4
+position = Vector2(4000, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_5")
+centered = false
+
+[node name="G1" type="Sprite2D" parent="Terrain" unique_id=1273462112]
+texture_filter = 4
+position = Vector2(4800, 0)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_6")
+centered = false
+
+[node name="A2" type="Sprite2D" parent="Terrain" unique_id=26940501]
+texture_filter = 4
+position = Vector2(0, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_7")
+centered = false
+
+[node name="B2" type="Sprite2D" parent="Terrain" unique_id=474694464]
+texture_filter = 4
+position = Vector2(800, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_8")
+centered = false
+
+[node name="C2" type="Sprite2D" parent="Terrain" unique_id=1441013874]
+texture_filter = 4
+position = Vector2(1600, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_9")
+centered = false
+
+[node name="D2" type="Sprite2D" parent="Terrain" unique_id=1195973313]
+texture_filter = 4
+position = Vector2(2400, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_10")
+centered = false
+
+[node name="E2" type="Sprite2D" parent="Terrain" unique_id=931732031]
+texture_filter = 4
+position = Vector2(3200, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_11")
+centered = false
+
+[node name="F2" type="Sprite2D" parent="Terrain" unique_id=1058862182]
+texture_filter = 4
+position = Vector2(4000, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_12")
+centered = false
+
+[node name="G2" type="Sprite2D" parent="Terrain" unique_id=1013481730]
+texture_filter = 4
+position = Vector2(4800, 800)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_13")
+centered = false
+
+[node name="A3" type="Sprite2D" parent="Terrain" unique_id=338660567]
+texture_filter = 4
+position = Vector2(0, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_14")
+centered = false
+
+[node name="B3" type="Sprite2D" parent="Terrain" unique_id=2065164441]
+texture_filter = 4
+position = Vector2(800, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_15")
+centered = false
+
+[node name="C3" type="Sprite2D" parent="Terrain" unique_id=1405650278]
+texture_filter = 4
+position = Vector2(1600, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_16")
+centered = false
+
+[node name="D3" type="Sprite2D" parent="Terrain" unique_id=429282614]
+texture_filter = 4
+position = Vector2(2400, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_17")
+centered = false
+
+[node name="E3" type="Sprite2D" parent="Terrain" unique_id=488528456]
+texture_filter = 4
+position = Vector2(3200, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_18")
+centered = false
+
+[node name="F3" type="Sprite2D" parent="Terrain" unique_id=44419144]
+texture_filter = 4
+position = Vector2(4000, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_19")
+centered = false
+
+[node name="G3" type="Sprite2D" parent="Terrain" unique_id=1276742098]
+texture_filter = 4
+position = Vector2(4800, 1600)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_20")
+centered = false
+
+[node name="A4" type="Sprite2D" parent="Terrain" unique_id=213688569]
+texture_filter = 4
+position = Vector2(0, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_21")
+centered = false
+
+[node name="B4" type="Sprite2D" parent="Terrain" unique_id=1211550617]
+texture_filter = 4
+position = Vector2(800, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_22")
+centered = false
+
+[node name="C4" type="Sprite2D" parent="Terrain" unique_id=1764573296]
+texture_filter = 4
+position = Vector2(1600, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_23")
+centered = false
+
+[node name="D4" type="Sprite2D" parent="Terrain" unique_id=1903872181]
+texture_filter = 4
+position = Vector2(2400, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_24")
+centered = false
+
+[node name="E4" type="Sprite2D" parent="Terrain" unique_id=1780543502]
+texture_filter = 4
+position = Vector2(3200, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_25")
+centered = false
+
+[node name="F4" type="Sprite2D" parent="Terrain" unique_id=766353773]
+texture_filter = 4
+position = Vector2(4000, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_26")
+centered = false
+
+[node name="G4" type="Sprite2D" parent="Terrain" unique_id=242171581]
+texture_filter = 4
+position = Vector2(4800, 2400)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_27")
+centered = false
+
+[node name="A5" type="Sprite2D" parent="Terrain" unique_id=428467129]
+texture_filter = 4
+position = Vector2(0, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_28")
+centered = false
+
+[node name="B5" type="Sprite2D" parent="Terrain" unique_id=1269991546]
+texture_filter = 4
+position = Vector2(800, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_29")
+centered = false
+
+[node name="C5" type="Sprite2D" parent="Terrain" unique_id=845188756]
+texture_filter = 4
+position = Vector2(1600, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_30")
+centered = false
+
+[node name="D5" type="Sprite2D" parent="Terrain" unique_id=383739318]
+texture_filter = 4
+position = Vector2(2400, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_31")
+centered = false
+
+[node name="E5" type="Sprite2D" parent="Terrain" unique_id=1529608312]
+texture_filter = 4
+position = Vector2(3200, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_32")
+centered = false
+
+[node name="F5" type="Sprite2D" parent="Terrain" unique_id=314966371]
+texture_filter = 4
+position = Vector2(4000, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_33")
+centered = false
+
+[node name="G5" type="Sprite2D" parent="Terrain" unique_id=2030416699]
+texture_filter = 4
+position = Vector2(4800, 3200)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("tex_34")
+centered = false
+
+[node name="Forests" type="Node2D" parent="."]
+
+[node name="ForestNorthWoods" type="Node2D" parent="Forests"]
+position = Vector2(2740, 542)
+script = ExtResource("forest_3d_script")
+forest_seed = 1026
+lobe_centers = PackedVector2Array(-410, 18, -180, -72, 80, -122, 330, -72, 220, 148, -40, 98)
+lobe_radii = PackedVector2Array(150, 120, 190, 150, 200, 150, 170, 140, 150, 110, 120, 90)
+pine_ratio = 0.35
+
+[node name="ForestD2Foothills" type="Node2D" parent="Forests"]
+position = Vector2(2515, 1240)
+script = ExtResource("forest_3d_script")
+forest_seed = 2035
+lobe_centers = PackedVector2Array(45, -90, -45, 90)
+lobe_radii = PackedVector2Array(110, 150, 120, 110)
+pine_ratio = 0.6
+
+[node name="ForestWestGrove" type="Node2D" parent="Forests"]
+position = Vector2(1970, 1287)
+script = ExtResource("forest_3d_script")
+forest_seed = 3044
+lobe_centers = PackedVector2Array(-70, -137, 110, 43, -40, 93)
+lobe_radii = PackedVector2Array(190, 130, 140, 120, 120, 90)
+pine_ratio = 0.2
+
+[node name="ForestF3Foothills" type="Node2D" parent="Forests"]
+position = Vector2(3865, 1945)
+script = ExtResource("forest_3d_script")
+forest_seed = 4053
+lobe_centers = PackedVector2Array(5, -115, -5, 115)
+lobe_radii = PackedVector2Array(80, 140, 95, 105)
+pine_ratio = 0.6
+
+[node name="ForestG4Foothills" type="Node2D" parent="Forests"]
+position = Vector2(4928, 2750)
+script = ExtResource("forest_3d_script")
+forest_seed = 5062
+lobe_centers = PackedVector2Array(-8, -120, 7, 120)
+lobe_radii = PackedVector2Array(90, 150, 80, 80)
+pine_ratio = 0.6
+
+[node name="ForestB4Foothills" type="Node2D" parent="Forests"]
+position = Vector2(1515, 2755)
+script = ExtResource("forest_3d_script")
+forest_seed = 6071
+lobe_centers = PackedVector2Array(-35, -105, 35, 105)
+lobe_radii = PackedVector2Array(100, 140, 90, 110)
+pine_ratio = 0.6
+
+[node name="ForestSouthWoods" type="Node2D" parent="Forests"]
+position = Vector2(3480, 2657)
+script = ExtResource("forest_3d_script")
+forest_seed = 7080
+lobe_centers = PackedVector2Array(-130, -7, 90, 103, 40, -97)
+lobe_radii = PackedVector2Array(160, 120, 180, 140, 120, 90)
+pine_ratio = 0.2
+
+[node name="ForestG2Grove" type="Node2D" parent="Forests"]
+position = Vector2(5240, 1430)
+script = ExtResource("forest_3d_script")
+forest_seed = 8089
+lobe_centers = PackedVector2Array(60, -30, -60, 30)
+lobe_radii = PackedVector2Array(120, 90, 80, 70)
+pine_ratio = 0.2
+
+[node name="ForestF1Grove" type="Node2D" parent="Forests"]
+position = Vector2(4790, 370)
+script = ExtResource("forest_3d_script")
+forest_seed = 9098
+lobe_centers = PackedVector2Array(-70, -40, 70, 40)
+lobe_radii = PackedVector2Array(120, 90, 90, 70)
+pine_ratio = 0.2
+
+[node name="ForestB1Grove" type="Node2D" parent="Forests"]
+position = Vector2(1115, 525)
+script = ExtResource("forest_3d_script")
+forest_seed = 10107
+lobe_centers = PackedVector2Array(-35, -55, 35, 55)
+lobe_radii = PackedVector2Array(90, 80, 70, 60)
+pine_ratio = 0.2
+
+[node name="ForestF5Grove" type="Node2D" parent="Forests"]
+position = Vector2(4750, 3130)
+script = ExtResource("forest_3d_script")
+forest_seed = 11116
+lobe_centers = PackedVector2Array(0, 0)
+lobe_radii = PackedVector2Array(110, 80)
+pine_ratio = 0.2
+
+[node name="ForestRiverF2" type="Node2D" parent="Forests"]
+position = Vector2(4411, 859)
+script = ExtResource("forest_3d_script")
+forest_seed = 12125
+lobe_centers = PackedVector2Array(279.5, -163.7, 186.6, -145.0, 111.8, -92.8, 38.8, -46.8, -74.5, 1.1, -147.5, 73.1, -178.4, 152.5, -212.9, 220.2)
+lobe_radii = PackedVector2Array(63.4, 49.2, 50.6, 59.5, 54.3, 43.5, 66.2, 58.6, 63.1, 60.8, 58.0, 60.2, 53.0, 56.9, 49.8, 52.1)
+pine_ratio = 0.05
+
+[node name="ForestRiverE3" type="Node2D" parent="Forests"]
+position = Vector2(3613, 1963)
+script = ExtResource("forest_3d_script")
+forest_seed = 13134
+lobe_centers = PackedVector2Array(152.3, -157.1, 73.5, -97.9, 12.7, -19.4, -32.1, 53.4, -75.7, 94.4, -130.4, 123.9)
+lobe_radii = PackedVector2Array(48.5, 54.0, 47.7, 49.2, 50.0, 44.8, 54.5, 42.3, 59.6, 42.4, 63.3, 45.2)
+pine_ratio = 0.05
+
+[node name="ForestRiverD4" type="Node2D" parent="Forests"]
+position = Vector2(2494, 2882)
+script = ExtResource("forest_3d_script")
+forest_seed = 14143
+lobe_centers = PackedVector2Array(244.5, -153.0, 150.1, -109.2, 55.6, -49.1, 12.4, 40.0, -89.2, 32.5, -139.7, 119.6, -234.0, 116.1)
+lobe_radii = PackedVector2Array(62.8, 42.8, 64.4, 46.1, 62.9, 50.8, 60.0, 55.2, 48.2, 42.4, 53.8, 58.3, 64.3, 46.0)
+pine_ratio = 0.05
+
+[node name="Mountains" type="Node2D" parent="."]
+
+[node name="MountainD2" type="Node2D" parent="Mountains"]
+position = Vector2(2848, 1232)
+scale = Vector2(0.5, 0.5)
+script = ExtResource("mountain_3d_script")
+points = PackedVector2Array(224, -544, 150, -280, 60, -10, -60, 250, -190, 490)
+widths = PackedFloat32Array(124, 102, 138, 98, 116)
+range_seed = 24
+peak_count = 6
+width_scale = 2.0
+tree_density = 0.2
+
+[node name="MountainF3" type="Node2D" parent="Mountains"]
+position = Vector2(4130, 1851)
+scale = Vector2(0.5, 0.5)
+script = ExtResource("mountain_3d_script")
+points = PackedVector2Array(110, -582, 60, -282, 10, 18, -40, 268, -100, 470)
+widths = PackedFloat32Array(120, 98, 136, 98, 100)
+range_seed = 17
+peak_count = 6
+width_scale = 2.0
+tree_density = 0.2
+
+[node name="MountainG4" type="Node2D" parent="Mountains"]
+position = Vector2(5170, 2695)
+scale = Vector2(0.5, 0.5)
+script = ExtResource("mountain_3d_script")
+points = PackedVector2Array(160, -270, 0, 0, -160, 270)
+widths = PackedFloat32Array(136, 104, 124)
+range_seed = 10
+peak_count = 3
+width_scale = 2.0
+tree_density = 0.2
+
+[node name="MountainTest" type="Node2D" parent="." unique_id=1037999348]
+position = Vector2(1230, 2800)
+scale = Vector2(0.5, 0.5)
+script = ExtResource("mountain_3d_script")
+points = PackedVector2Array(260, -560, 170, -330, 60, -100, -60, 140, -150, 360, -240, 560)
+widths = PackedFloat32Array(110, 90, 135, 100, 125, 115)
+peak_count = 6
+width_scale = 2.0
+tree_density = 0.2
+
+[node name="Roads" type="Node2D" parent="." unique_id=716195973]
+script = ExtResource("road_script")
+
+[node name="Mining" type="Node2D" parent="."]
+script = ExtResource("mining_script")
+
+[node name="Depots" type="Node2D" parent="." unique_id=849721362]
+script = ExtResource("depot_placer_script")
+
+[node name="Cities" type="Node2D" parent="." unique_id=1420537254]
+script = ExtResource("cities_script")
+
+[node name="Traffic" type="Node2D" parent="." unique_id=50525852]
+script = ExtResource("traffic_script")
+
+[node name="Hauling" type="Node2D" parent="."]
+script = ExtResource("hauling_script")
+
+[node name="Factories" type="Node" parent="."]
+script = ExtResource("factories_script")
+
+[node name="Demand" type="Node" parent="."]
+script = ExtResource("town_demand_script")
+
+[node name="MapSigns" type="Node2D" parent="."]
+script = ExtResource("map_signs_script")
+
+[node name="MapOverlay" type="Node2D" parent="."]
+script = ExtResource("map_overlay_script")
+
+[node name="Wallet" type="Node" parent="." unique_id=2105943300]
+script = ExtResource("wallet_script")
+
+[node name="Clock" type="Node" parent="."]
+script = ExtResource("clock_script")
+
+[node name="FactoryView" type="CanvasLayer" parent="."]
+script = ExtResource("factory_view_script")
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1093841680]
+layer = 2
+
+[node name="MoneyPanel" type="Control" parent="HUD" unique_id=748765661]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("money_panel_script")
+
+[node name="DatePanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("date_panel_script")
+
+[node name="DepotPanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("depot_panel_script")
+
+[node name="BuildingPanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("building_panel_script")
+
+[node name="SpeedPanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("speed_panel_script")
+
+[node name="TownPanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("town_panel_script")
+
+[node name="RoutesPanel" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("routes_panel_script")
+
+[node name="BuildBar" type="Control" parent="HUD" unique_id=157610774]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("build_bar_script")
+
+[node name="BuildHelp" type="Control" parent="HUD" unique_id=321695248]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("build_help_script")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=785935114]
+position = Vector2(2800, 1800)
+script = ExtResource("camera_script")

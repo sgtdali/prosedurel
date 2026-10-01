@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://cstuohx5b1a1p"]
+
+[ext_resource type="Script" path="res://mountain_visual.gd" id="1_mountain"]
+
+[node name="MountainPreview" type="Node2D" unique_id=586551374]
+position = Vector2(728, 435)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=480480567]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-900, -600, 900, -600, 900, 600, -900, 600)
+
+[node name="MountainVisual" type="Node2D" parent="." unique_id=1269848704]
+scale = Vector2(1.4, 1.4)
+script = ExtResource("1_mountain")
+mountain_seed = 1543333331

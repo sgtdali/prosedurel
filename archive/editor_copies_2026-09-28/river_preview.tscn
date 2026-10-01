@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://djx17jnhnjspc"]
+
+[ext_resource type="Script" path="res://river_visual.gd" id="1_river"]
+
+[node name="RiverPreview" type="Node2D" unique_id=659932089]
+position = Vector2(708, 459)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=1584095343]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-460, -390, 460, -390, 460, 390, -460, 390)
+
+[node name="RiverVisual" type="Node2D" parent="." unique_id=545926024]
+script = ExtResource("1_river")
+points = PackedVector2Array()

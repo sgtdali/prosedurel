@@ -1,0 +1,81 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://visuals/production_factory_visual.gd" id="1_factory"]
+[ext_resource type="Script" path="res://visuals/factory_badge.gd" id="2_badge"]
+
+[node name="ProductionFactoryPreview" type="Node2D"]
+
+[node name="GrassBackdrop" type="Polygon2D" parent="."]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(0, 0, 1600, 0, 1600, 900, 0, 900)
+
+[node name="RoadWorking" type="Polygon2D" parent="."]
+color = Color(0.36, 0.38, 0.385, 1)
+polygon = PackedVector2Array(150, 684, 700, 684, 700, 740, 150, 740)
+
+[node name="Working" type="Node2D" parent="."]
+position = Vector2(400, 480)
+scale = Vector2(3.2, 3.2)
+script = ExtResource("1_factory")
+connected = true
+
+[node name="WorkingBadge" type="Node2D" parent="."]
+position = Vector2(300, 250)
+scale = Vector2(2.4, 2.4)
+script = ExtResource("2_badge")
+spin = 0.3
+output = {"steel": 34}
+
+[node name="Stopped" type="Node2D" parent="."]
+position = Vector2(1000, 480)
+scale = Vector2(3.2, 3.2)
+script = ExtResource("1_factory")
+smoking = false
+
+[node name="StoppedBadge" type="Node2D" parent="."]
+position = Vector2(900, 250)
+scale = Vector2(2.4, 2.4)
+script = ExtResource("2_badge")
+working = false
+
+[node name="MapScale" type="Node2D" parent="."]
+position = Vector2(1380, 760)
+script = ExtResource("1_factory")
+
+[node name="MapScaleBadge" type="Node2D" parent="."]
+position = Vector2(1350, 690)
+script = ExtResource("2_badge")
+spin = 0.3
+output = {"steel": 34}
+
+[node name="Captions" type="Node2D" parent="."]
+
+[node name="WorkingCaption" type="Label" parent="Captions"]
+offset_left = 250.0
+offset_top = 800.0
+offset_right = 560.0
+offset_bottom = 830.0
+theme_override_colors/font_color = Color(0.227, 0.165, 0.141, 1)
+theme_override_font_sizes/font_size = 20
+text = "Çalışıyor · yola bağlı"
+horizontal_alignment = 1
+
+[node name="StoppedCaption" type="Label" parent="Captions"]
+offset_left = 850.0
+offset_top = 800.0
+offset_right = 1160.0
+offset_bottom = 830.0
+theme_override_colors/font_color = Color(0.227, 0.165, 0.141, 1)
+theme_override_font_sizes/font_size = 20
+text = "Duruyor · yol yok"
+horizontal_alignment = 1
+
+[node name="MapCaption" type="Label" parent="Captions"]
+offset_left = 1290.0
+offset_top = 830.0
+offset_right = 1470.0
+offset_bottom = 856.0
+theme_override_colors/font_color = Color(0.227, 0.165, 0.141, 1)
+theme_override_font_sizes/font_size = 16
+text = "Harita ölçeği"
+horizontal_alignment = 1

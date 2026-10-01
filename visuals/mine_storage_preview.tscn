@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://visuals/mine_storage_visual.gd" id="1_storage"]
+[ext_resource type="Script" path="res://visuals/iron_mine_visual.gd" id="2_iron"]
+[ext_resource type="Script" path="res://visuals/logistics_depot_visual.gd" id="3_depot"]
+
+[node name="MineStoragePreview" type="Node2D"]
+position = Vector2(800, 450)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="."]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-800, -450, 800, -450, 800, 450, -800, 450)
+
+[node name="MineStorage" type="Node2D" parent="."]
+position = Vector2(-60, -10)
+scale = Vector2(2.9, 2.9)
+script = ExtResource("1_storage")
+
+[node name="MapScale" type="Node2D" parent="."]
+position = Vector2(-560, 150)
+
+[node name="IronMine" type="Node2D" parent="MapScale"]
+position = Vector2(0, -250)
+scale = Vector2(0.9, 0.9)
+script = ExtResource("2_iron")
+
+[node name="MineStorageSmall" type="Node2D" parent="MapScale"]
+position = Vector2(0, 0)
+scale = Vector2(0.9, 0.9)
+script = ExtResource("1_storage")
+iron_fill = 0.3
+copper_fill = 1.0
+coal_fill = 0.0
+
+[node name="Depot" type="Node2D" parent="MapScale"]
+position = Vector2(0, 220)
+scale = Vector2(0.9, 0.9)
+script = ExtResource("3_depot")
+
+[node name="FullStorage" type="Node2D" parent="."]
+position = Vector2(560, -10)
+scale = Vector2(1.8, 1.8)
+script = ExtResource("1_storage")
+iron_fill = 1.0
+copper_fill = 0.15
+coal_fill = 0.45

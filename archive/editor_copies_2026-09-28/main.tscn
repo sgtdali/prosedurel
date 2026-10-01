@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://tatoc2fhigh5"]
+
+[ext_resource type="Script" path="res://main.gd" id="1_main"]
+
+[node name="HousePreview" type="Node2D" unique_id=1764593467]
+script = ExtResource("1_main")

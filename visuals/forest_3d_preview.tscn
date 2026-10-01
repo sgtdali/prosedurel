@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://visuals/forest_visual.gd" id="1_old"]
+[ext_resource type="Script" path="res://visuals/forest_3d_study.gd" id="2_f3d"]
+
+[node name="Forest3DPreview" type="Node2D"]
+
+[node name="GrassBackdrop" type="Polygon2D" parent="."]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-200, -200, 1800, -200, 1800, 1300, -200, 1300)
+
+[node name="OldForest" type="Node2D" parent="."]
+position = Vector2(250, 260)
+script = ExtResource("1_old")
+forest_seed = 90411
+
+[node name="Forest3DStudy" type="Node2D" parent="."]
+position = Vector2(250, 750)
+script = ExtResource("2_f3d")
+forest_seed = 90411
+
+[node name="Forest3DGroup" type="Node2D" parent="."]
+position = Vector2(1000, 520)
+script = ExtResource("2_f3d")
+forest_seed = 4711
+lobe_centers = PackedVector2Array(-410, 18, -180, -72, 80, -122, 330, -72, 220, 148, -40, 98)
+lobe_radii = PackedVector2Array(150, 120, 190, 150, 200, 150, 170, 140, 150, 110, 120, 90)

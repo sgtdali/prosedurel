@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://blf84ja26phhn"]
+
+[ext_resource type="Script" path="res://hill_visual.gd" id="1_hill"]
+
+[node name="HillPreview" type="Node2D" unique_id=396634615]
+position = Vector2(694, 436)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=2071206791]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-460, -390, 460, -390, 460, 390, -460, 390)
+
+[node name="HillVisual" type="Node2D" parent="." unique_id=397333241]
+scale = Vector2(1.6, 1.6)
+script = ExtResource("1_hill")

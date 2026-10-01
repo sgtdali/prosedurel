@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://b2l7tlgbe56dc"]
+
+[ext_resource type="Script" path="res://road_visual.gd" id="1_road"]
+
+[node name="RoadPreview" type="Node2D" unique_id=589786820]
+position = Vector2(757, 441)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=920415661]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-460, -390, 460, -390, 460, 390, -460, 390)
+
+[node name="RoadVisual" type="Node2D" parent="." unique_id=293916973]
+scale = Vector2(2, 2)
+script = ExtResource("1_road")
+street_half_width = null
+sidewalk_color = null
+bridge_color = null
+railing_color = null
+preview_length = 400.0
+preview_amplitude = 60.0

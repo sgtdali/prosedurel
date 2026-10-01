@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://visuals/copper_mine_visual.gd" id="1_copper_mine"]
+
+[node name="CopperMinePreview" type="Node2D"]
+position = Vector2(800, 440)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="."]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-800, -440, 800, -440, 800, 460, -800, 460)
+
+[node name="CopperMineVisual" type="Node2D" parent="."]
+position = Vector2(0, -10)
+scale = Vector2(4.4, 4.4)
+script = ExtResource("1_copper_mine")

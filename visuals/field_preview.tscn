@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://c5djs0gxs4kf0"]
+
+[ext_resource type="Script" uid="uid://baefvcd560mix" path="res://visuals/field_visual.gd" id="1_field"]
+
+[node name="FieldPreview" type="Node2D" unique_id=447799666]
+position = Vector2(656, 476)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=887626569]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-460, -390, 460, -390, 460, 390, -460, 390)
+
+[node name="Fields" type="Node2D" parent="." unique_id=1820231046]
+scale = Vector2(2.8, 2.8)
+
+[node name="Field0" type="Node2D" parent="Fields" unique_id=1374785362]
+position = Vector2(-95, 0)
+script = ExtResource("1_field")
+
+[node name="Field1" type="Node2D" parent="Fields" unique_id=183693281]
+script = ExtResource("1_field")
+tone = 1
+
+[node name="Field2" type="Node2D" parent="Fields" unique_id=681582674]
+position = Vector2(95, 0)
+script = ExtResource("1_field")
+tone = 2

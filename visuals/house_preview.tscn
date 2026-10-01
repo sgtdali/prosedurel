@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://c8b1huk5wyk64"]
+
+[ext_resource type="Script" uid="uid://xpgbos6vgr25" path="res://visuals/house_visual.gd" id="1_house"]
+
+[node name="HousePreview" type="Node2D" unique_id=1924969729]
+position = Vector2(665, 439)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=1445461089]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-460, -390, 460, -390, 460, 390, -460, 390)
+
+[node name="HouseVisual" type="Node2D" parent="." unique_id=566818780]
+scale = Vector2(4, 4)
+script = ExtResource("1_house")

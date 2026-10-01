@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://crevehfxsqiif"]
+
+[ext_resource type="Script" path="res://factory_visual.gd" id="1_factory"]
+
+[node name="FactoryPreview" type="Node2D" unique_id=455841703]
+position = Vector2(747, 443)
+
+[node name="GrassBackdrop" type="Polygon2D" parent="." unique_id=1689864997]
+color = Color(0.686275, 0.792157, 0.454902, 1)
+polygon = PackedVector2Array(-460, -390, 460, -390, 460, 390, -460, 390)
+
+[node name="FactoryVisual" type="Node2D" parent="." unique_id=1245391574]
+position = Vector2(-50, 0)
+scale = Vector2(5, 5)
+script = ExtResource("1_factory")
