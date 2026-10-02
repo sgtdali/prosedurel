@@ -39,10 +39,10 @@ func _capture() -> void:
 		return
 	var record: Dictionary = placer.factory_records()[0]
 	var f = record["factory"]
-	f.build(0, "steel")
-	f.build(1, "steel")
+	f.build(0, "furnace")
+	f.build(1, "furnace")
 	f.upgrade(1)
-	f.build(2, "steel")
+	f.build(2, "caster")
 	var factories = map.get_node("Factories")
 	for i in 400:
 		f.deliver("iron", 0.6)

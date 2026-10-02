@@ -74,7 +74,7 @@ Sorun: bir yerleşkenin yuvalarına hem çelik hem parça hattı kurulabildiği 
 
 **Karar: her yerleşke bir süreç türüdür**, türünü kurarken seçer; ne ürettiğini parsellerine kurulan hatlar
 (modüller) belirler:
-- Ergitme tesisi: cevherden metal. Şimdilik çelik hattı (demir + kömür → çelik); ileride bakır külçe vb.
+- Ergitme tesisi: cevherden metal. Eritme ocağı + döküm (demir + kömür → sıvı demir → çelik), bacalar; ileride bakır külçe vb.
 - Montaj fabrikası: metalden ürün. Şimdilik parça hattı (çelik + bakır → makine parçası); ileride kablo, alet vb.
   Nüfus açılımına kadar kilitli.
 - Montajın çeliği kamyonla bir ergitme tesisinden gelir (fabrikadan fabrikaya rota). Çelik makası kalktı.
@@ -90,6 +90,38 @@ Kurallar:
 
 Ölçüt: oyuncunun zamanı "şunu şuna bağla" ile değil "parçayı nerede üreteyim, bu yol yetiyor mu, o kasabaya ulaşmaya
 değer mi" ile geçmeli.
+
+## Ergitme tesisinin bacaları (adım 1, 2026-10-02)
+
+Ergitme tesisi Captain of Industry'deki gibi yapılandırılabilir olacak (eritme, döküm, baca; adım adım). İlk adım baca:
+- Çelik hattı çalışırken duman çıkarır (1/sn, seviyeyle artar); duman bina içinde kalır, taşınmaz.
+- Parsellerin altında ayrı bir **baca sırası**: tesis 2 baca yeriyle ve 1 hazır bacayla gelir; baca 3.000, yeni baca
+  yeri 2.000 (en çok 6). Bir baca 2 duman/sn atar, yani iki seviye-1 fırına yeter.
+- Bacalar yetmezse duman birikir (10 birim), dolunca fırınlar birlikte yavaşlar: hat durumu "choked", balonda gri
+  duman, ipucunda "Baca yetmiyor". Hazır gelen baca kaldırılınca para vermez, satın alınanlar yarısını geri verir.
+- Görsel: fırınların bacasından duman kanalı parsellerin altından bacalara gider, içinde gri noktalar akar; duman
+  bacalardan çıkar. Ekran görüntüsü `img/baca_ilk.png`.
+- Blender: baca `create_campus_kit.py` "chimney" (14 m'lik konik gövde, üstte kırmızı-beyaz bantlar, platform,
+  merdiven, kuzeyde duman girişi; yukarıdan bakınca bantlar halka olarak okunur). Fırın render'ında fırının kendi
+  bacası gizlenir (`render_furnace_topdown.py` STACK_PREFIXES); alt bölümü kalır, duman kanalı oradan çıkar.
+
+## Ergitme tesisinin dökümü (adım 2, 2026-10-02)
+
+"Çelik hattı" ikiye bölündü; ikisi de hat parsellerine kurulur, oranı oyuncu seçer:
+- **Eritme ocağı** (8.000): 1 demir + 1 kömür → 0,5 sıvı demir + 1 duman /sn.
+- **Döküm** (6.000): 1 sıvı demir → 1 çelik /sn (iki ocağa yeter).
+- Sıvı demir bina içinde kalır (`LineFactory.INTERNAL_GOODS`, `held`, en çok 20); kamyonla taşınmaz. Döküm yetmezse
+  birikir, dolunca ocaklar yavaşlar: durum "backed", balonda turuncu sıvı demir, ipucunda "Döküm yetmiyor". Dökümü
+  olmayan ocak 20 birim eritip bekler.
+- Görsel: ocakların döküm ağzından parsellerin altındaki kızgın oluğa, oradan dökümlerin potasına turuncu akış;
+  çelik dökümün kuzey ucundan rafa çıkar. Döküm makinesi Blender'da (`create_campus_kit.py` "caster_on/off":
+  pota tablası, tundish, kalıp, soğutma odası, silindirli masa üzerinde soğuyan üç plaka, kesme portalı, kontrol
+  kabini). Ekran görüntüsü `img/dokum_yakin.png`.
+- Animasyon (`_draw_casting`): kızgın şerit kalıptan kuzeye ilerler, sarı kesme portalı onunla birlikte ilerleyip
+  keser (kıvılcım), plakalar silindirli masada turuncudan çelik grisine soğuyarak yürür; hız dökümün çalışma hızına
+  bağlı, durunca durur ve söner. Soğutma odasından buhar çıkar. Şerit, plakalar ve portal bu yüzden Blender resminde
+  yok, oyun çizer. Kareler: `tools/render_caster_anim.gd`, `img/dokum_anim.gif`.
+- Sonraki olası adımlar: kalıp seçimi (levha / profil), konvertör, bakır eritme.
 
 ## Görseller: Blender (2026-10-01)
 

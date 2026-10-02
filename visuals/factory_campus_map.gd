@@ -36,11 +36,13 @@ func _init() -> void:
 	add_child(campus)
 
 
-## The campus' fence turned into these coordinates, for `slots` plots
-static func footprint(slots: int) -> Rect2:
+## The campus' fence turned into these coordinates, for `slots` plots of a works of `kind` (a
+## smelting works is deeper by its chimney row)
+static func footprint(slots: int, kind := "smelter") -> Rect2:
 	var right := CampusVisual.LEFT + slots * CampusVisual.PLOT_STEP + 4.0
-	return Rect2(CampusVisual.TOP, -right, CampusVisual.BOTTOM - CampusVisual.TOP, right - CampusVisual.LEFT)
+	var bottom := CampusVisual.BOTTOM + (CampusVisual.CHIMNEY_ROW if LineFactory.KINDS[kind].get("chimneys", false) else 0.0)
+	return Rect2(CampusVisual.TOP, -right, bottom - CampusVisual.TOP, right - CampusVisual.LEFT)
 
 
 func current_footprint() -> Rect2:
-	return footprint(campus.factory.slots)
+	return footprint(campus.factory.slots, campus.factory.kind)

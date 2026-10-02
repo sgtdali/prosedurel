@@ -147,6 +147,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			if not (same_record and menu.get("plot", -2) == -1):
 				campus.menu = CampusActions.annex_menu(factory)
 				_open = record
+		"chimney":
+			if not (same_record and menu.get("chimney", -2) == target["index"]):
+				campus.menu = CampusActions.chimney_menu(factory, target["index"])
+				_open = record
+		"chimney_annex":
+			if not (same_record and menu.get("chimney", -2) == factory.chimneys.size()):
+				campus.menu = CampusActions.chimney_annex_menu(factory)
+				_open = record
 		_:
 			# Piles and the yard: the building card shows the stocks
 			return

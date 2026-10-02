@@ -58,7 +58,7 @@ func _capture() -> void:
 						break
 				var f = record["factory"]
 				for slot in f.slots:
-					f.build(slot, "steel")
+					f.build(slot, "caster" if slot % 3 == 2 else "furnace")
 	var factories = map.get_node("Factories")
 	for i in 300:
 		for record in placer.factory_records():

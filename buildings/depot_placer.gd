@@ -316,7 +316,7 @@ func _factory_problem(at: Vector2, angle: float) -> String:
 func _factory_footprint() -> Rect2:
 	if _moving.get("kind", "") == "factory":
 		return _moving["visual"].current_footprint()
-	return CampusMap.footprint(LineFactory.START_SLOTS)
+	return CampusMap.footprint(LineFactory.START_SLOTS, _factory_kind(selected_building))
 
 
 ## Buys `record`'s factory one more plot if the ground beyond it is free (and pays for it); the

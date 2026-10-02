@@ -91,7 +91,7 @@ func _build() -> void:
 	if not _check(facility["marker"].connected, "factory gate not on a road"):
 		return
 	_check(money_before - wallet.money == placer.COSTS["factory"], "factory price")
-	_check(facility["factory"].build(0, "steel"), "steel line not built on the campus")
+	_check(facility["factory"].build(0, "furnace") and facility["factory"].build(1, "caster"), "furnace and caster not built on the campus")
 	# Sales depot in the zone of the nearest town the facility can reach by road.
 	var town: Dictionary = {}
 	for candidate in cities.towns:

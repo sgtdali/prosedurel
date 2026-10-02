@@ -8,7 +8,7 @@ extends RefCounted
 const LineFactory = preload("res://economy/line_factory.gd")
 const Goods = preload("res://facility/goods.gd")
 
-const NAMES := {"steel": "Çelik hattı", "parts": "Parça hattı"}
+const NAMES := {"furnace": "Eritme ocağı", "caster": "Döküm", "parts": "Parça hattı"}
 
 
 ## The tray over plot `slot`: build a line on an empty one; speed up or take out a line
@@ -27,6 +27,22 @@ static func plot_menu(factory: LineFactory, slot: int, parts_open: bool) -> Dict
 	return {"plot": slot, "options": options}
 
 
+## The tray over a chimney place: build a chimney on an empty one, take one down
+static func chimney_menu(factory: LineFactory, place: int) -> Dictionary:
+	var options: Array = []
+	if factory.chimneys[place].is_empty():
+		options.append({"id": "chimney", "price": LineFactory.CHIMNEY_COST, "enabled": factory.can_afford(LineFactory.CHIMNEY_COST)})
+	else:
+		options.append({"id": "remove_chimney", "price": -factory.chimney_refund(place), "enabled": true})
+	return {"chimney": place, "options": options}
+
+
+## The tray over the chimney place for sale
+static func chimney_annex_menu(factory: LineFactory) -> Dictionary:
+	return {"chimney": factory.chimneys.size(), "options": [{"id": "chimney_slot", "price": LineFactory.CHIMNEY_SLOT_COST,
+		"enabled": factory.can_afford(LineFactory.CHIMNEY_SLOT_COST)}]}
+
+
 ## The tray over the plot for sale
 static func annex_menu(factory: LineFactory) -> Dictionary:
 	return {"plot": -1, "options": [{"id": "slot", "price": LineFactory.SLOT_COST, "enabled": factory.can_afford(LineFactory.SLOT_COST)}]}
@@ -41,10 +57,13 @@ static func choose(factory: LineFactory, menu: Dictionary, id: String, buy_slot:
 			return false
 	var slot: int = menu.get("plot", -1)
 	match id:
-		"steel", "parts": return factory.build(slot, id)
+		"furnace", "caster", "parts": return factory.build(slot, id)
 		"upgrade": return factory.upgrade(slot)
 		"remove": return factory.remove(slot)
 		"slot": return buy_slot.call()
+		"chimney": return factory.build_chimney(menu["chimney"])
+		"remove_chimney": return factory.remove_chimney(menu["chimney"])
+		"chimney_slot": return factory.open_chimney_slot()
 	return false
 
 
@@ -59,8 +78,15 @@ static func tip(factory: LineFactory, target: Dictionary, menu: Dictionary, part
 			match line["status"]:
 				"starved": text += "\n%s eksik" % Goods.name_of(line["short"])
 				"blocked": text += "\nÇıkış sahası dolu"
+				"choked": text += "\nBaca yetmiyor: duman birikiyor"
+				"backed": text += "\nDöküm yetmiyor: %s bekliyor" % Goods.name_of(line["short"]).to_lower()
 			return text
 		"annex": return "Satılık parsel: tıkla, satın al"
+		"chimney":
+			if factory.chimneys[target["index"]].is_empty():
+				return "Boş baca yeri: tıkla, baca kur"
+			return "Baca · %s duman/sn atar\nFırınlar %s/sn çıkarıyor" % [LineFactory._rate(LineFactory.CHIMNEY_VENT), LineFactory._rate(factory.fumes_need())]
+		"chimney_annex": return "Satılık baca yeri: tıkla, satın al"
 		"bay":
 			var good: String = target["good"]
 			return "%s %d / %d" % [Goods.name_of(good), factory.in_amount(good), roundi(LineFactory.CAPACITY)]
@@ -70,7 +96,8 @@ static func tip(factory: LineFactory, target: Dictionary, menu: Dictionary, part
 		"option":
 			var option: Dictionary = menu["options"][target["index"]]
 			match option["id"]:
-				"steel": return "Çelik hattı: " + LineFactory.recipe_text("steel")
+				"furnace": return "Eritme ocağı: " + LineFactory.recipe_text("furnace")
+				"caster": return "Döküm: " + LineFactory.recipe_text("caster")
 				"parts":
 					if not parts_open:
 						return "Parça hattı kilitli: toplam %d evde açılır" % unlock_at
@@ -78,4 +105,7 @@ static func tip(factory: LineFactory, target: Dictionary, menu: Dictionary, part
 				"upgrade": return "Hızlandır: bir seviye daha hızlı"
 				"remove": return "Kaldır: ödenenin yarısı geri"
 				"slot": return "Parseli satın al: bir hat daha"
+				"chimney": return "Baca kur: %s duman/sn (iki fırına yeter)" % LineFactory._rate(LineFactory.CHIMNEY_VENT)
+				"remove_chimney": return "Bacayı kaldır" + (": yarısı geri" if factory.chimney_refund(menu["chimney"]) > 0 else "")
+				"chimney_slot": return "Baca yerini satın al"
 	return ""

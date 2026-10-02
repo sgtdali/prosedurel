@@ -131,6 +131,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		"annex":
 			if menu.get("plot", -2) != -1:
 				campus.menu = CampusActions.annex_menu(factory)
+		"chimney":
+			if menu.get("chimney", -2) != target["index"]:
+				campus.menu = CampusActions.chimney_menu(factory, target["index"])
+		"chimney_annex":
+			if menu.get("chimney", -2) != factory.chimneys.size():
+				campus.menu = CampusActions.chimney_annex_menu(factory)
 		"bay", "out":
 			var good: String = target["good"]
 			rates[good] = _next(RATE_STEPS, rates[good])

@@ -62,7 +62,7 @@ func _test() -> void:
 	placer._place_building()
 	var factory: Dictionary = placer.factory_records()[0]
 	var lines = factory["factory"]
-	if not _check(lines.build(0, "steel"), "no steel line on the new factory"):
+	if not _check(lines.build(0, "furnace"), "no furnace on the new factory"):
 		return
 	placer.building = false
 	var obstacles: int = roads.network.obstacles.size()
@@ -115,7 +115,7 @@ func _test() -> void:
 	if not _check(_find_site_near(factory_center, 150, 900, factory_center), "no spot to move the factory to"):
 		return
 	placer._place_building()
-	if not _check(factory["center"].distance_to(factory_center) > 50.0 and is_same(factory["factory"], lines) and lines.lines[0].get("kind", "") == "steel",
+	if not _check(factory["center"].distance_to(factory_center) > 50.0 and is_same(factory["factory"], lines) and lines.lines[0].get("kind", "") == "furnace",
 			"factory not moved with its lines"):
 		return
 	if not _check(placer.building_at(factory["center"]) == factory, "the factory is not found at its new place"):
@@ -134,7 +134,7 @@ func _test() -> void:
 	# factory asks once more first.
 	money = wallet.money
 	var refund: int = placer.refund_of(factory)
-	if not _check(refund == placer.COSTS["factory"] / 2 + 11000 / 2 + lines.slots_bought() * 5000 / 2, "factory refund %d" % refund):
+	if not _check(refund == placer.COSTS["factory"] / 2 + 8000 / 2 + lines.slots_bought() * 5000 / 2, "factory refund %d" % refund):
 		return
 	panel.select(factory)
 	panel.remove_selected()

@@ -39,7 +39,7 @@ func run() -> void:
 	# A smelting works makes steel; a truck takes it to the assembly works, which makes parts
 	var steelworks := LineFactory.new(0, "smelter")
 	steelworks.wallet = wallet
-	check(steelworks.build(0, "steel"), "steel line")
+	check(steelworks.build(0, "furnace") and steelworks.build(1, "caster"), "furnace and caster")
 	var steel_record := {"kind": "factory", "factory": steelworks}
 	var record := {"kind": "factory", "factory": factory}
 	for ore in ["iron", "coal"]:
@@ -133,7 +133,8 @@ func run() -> void:
 	map.get_node("Wallet").earn(50000 - map.get_node("Wallet").money)
 	# Production follows game time at 4x on a 20 fps machine, and stops while paused.
 	var timing := LineFactory.new(100000)
-	timing.build(0, "steel")
+	timing.build(0, "furnace")
+	timing.build(1, "caster")
 	timing.deliver("iron", 200.0)
 	timing.deliver("coal", 200.0)
 	for i in 200:

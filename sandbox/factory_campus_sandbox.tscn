@@ -1,12 +1,12 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://b5icj2vwnfbhy"]
 
-[ext_resource type="Script" path="res://sandbox/factory_campus_sandbox.gd" id="1_sandbox"]
-[ext_resource type="Script" path="res://economy/wallet.gd" id="2_wallet"]
-[ext_resource type="Script" path="res://economy/game_clock.gd" id="3_clock"]
-[ext_resource type="Script" path="res://visuals/factory_campus_visual.gd" id="4_campus"]
-[ext_resource type="Script" path="res://map/map_camera.gd" id="5_camera"]
-[ext_resource type="Script" path="res://ui/money_panel.gd" id="6_money"]
-[ext_resource type="Script" path="res://ui/speed_panel.gd" id="7_speed"]
+[ext_resource type="Script" uid="uid://cbtogqpmqcvjn" path="res://sandbox/factory_campus_sandbox.gd" id="1_sandbox"]
+[ext_resource type="Script" uid="uid://bpn6kppstf0mf" path="res://economy/wallet.gd" id="2_wallet"]
+[ext_resource type="Script" uid="uid://d1ph5t358gwro" path="res://economy/game_clock.gd" id="3_clock"]
+[ext_resource type="Script" uid="uid://cn2aql6lj7ed" path="res://visuals/factory_campus_visual.gd" id="4_campus"]
+[ext_resource type="Script" uid="uid://b7xyqr2lglilr" path="res://map/map_camera.gd" id="5_camera"]
+[ext_resource type="Script" uid="uid://dqwbjofb3y85" path="res://ui/money_panel.gd" id="6_money"]
+[ext_resource type="Script" uid="uid://q1ater6r3kk5" path="res://ui/speed_panel.gd" id="7_speed"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tip"]
 content_margin_left = 8.0
@@ -24,32 +24,33 @@ corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
-[node name="FactoryCampusSandbox" type="Node2D"]
+[node name="FactoryCampusSandbox" type="Node2D" unique_id=1854081724]
 script = ExtResource("1_sandbox")
 
-[node name="Wallet" type="Node" parent="."]
+[node name="Wallet" type="Node" parent="." unique_id=413262182]
 script = ExtResource("2_wallet")
 starting_money = 60000
 
-[node name="Clock" type="Node" parent="."]
+[node name="Clock" type="Node" parent="." unique_id=175107929]
 script = ExtResource("3_clock")
 
-[node name="Grass" type="Polygon2D" parent="."]
+[node name="Grass" type="Polygon2D" parent="." unique_id=545746134]
+position = Vector2(226, -39)
 color = Color(0.686275, 0.792157, 0.454902, 1)
 polygon = PackedVector2Array(0, 0, 5600, 0, 5600, 3600, 0, 3600)
 
-[node name="Campus" type="Node2D" parent="."]
+[node name="Campus" type="Node2D" parent="." unique_id=794160239]
 position = Vector2(2780, 1800)
 script = ExtResource("4_campus")
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=605413096]
 position = Vector2(2830, 1790)
 zoom = Vector2(2.4, 2.4)
 script = ExtResource("5_camera")
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="UI" type="CanvasLayer" parent="." unique_id=687058496]
 
-[node name="MoneyPanel" type="Control" parent="UI"]
+[node name="MoneyPanel" type="Control" parent="UI" unique_id=1757933880]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -59,7 +60,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("6_money")
 
-[node name="SpeedPanel" type="Control" parent="UI"]
+[node name="SpeedPanel" type="Control" parent="UI" unique_id=1282568895]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -69,7 +70,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("7_speed")
 
-[node name="Help" type="Label" parent="UI"]
+[node name="Help" type="Label" parent="UI" unique_id=2090100990]
 offset_left = 16.0
 offset_top = 12.0
 offset_right = 900.0
@@ -78,7 +79,7 @@ theme_override_colors/font_color = Color(0.2, 0.25, 0.15, 1)
 theme_override_font_sizes/font_size = 14
 text = "Parsele tıkla: hat kur / hızlandır · Satılık parsel: yuva aç · Yığın / saha (deneme): kamyon sıklığı · K: ergitme tesisi / montaj fabrikası"
 
-[node name="Tip" type="Label" parent="UI"]
+[node name="Tip" type="Label" parent="UI" unique_id=1385461950]
 visible = false
 theme_override_colors/font_color = Color(0.227, 0.165, 0.141, 1)
 theme_override_font_sizes/font_size = 14
