@@ -15,6 +15,7 @@ const DepotPlacer = preload("res://buildings/depot_placer.gd")
 const Hauling = preload("res://economy/hauling.gd")
 const Mining = preload("res://economy/mining.gd")
 const Wallet = preload("res://economy/wallet.gd")
+const TownDemand = preload("res://economy/town_demand.gd")
 
 const CARD := Color("#f1ebdc")
 const CARD_PRESSED := Color("#e6d4a8")
@@ -158,7 +159,8 @@ func _on_placement_changed(valid: bool, reason: String) -> void:
 		"iron_mine": building_name = "Demir madenini"
 		"copper_mine": building_name = "Bakır madenini"
 		"coal_mine": building_name = "Kömür madenini"
-		"factory": building_name = "Fabrikayı"
+		"factory": building_name = "Ergitme tesisini"
+		"assembly": building_name = "Montaj fabrikasını"
 	_hint_text.text = "Tıkla: %s kur  ·  Esc: İptal" % building_name if valid else reason + "  ·  Esc: İptal"
 	_place()
 
@@ -248,8 +250,9 @@ func _build_catalog() -> void:
 	_factory_items = HBoxContainer.new()
 	_factory_items.add_theme_constant_override("separation", 12)
 	column.add_child(_factory_items)
-	# One building; what it makes is designed inside it
-	_factory_items.add_child(_item_button("Fabrika", "factory", FactoryVisual, 0.34))
+	# One kind of works per process (its lines make the goods); each grows by plots
+	_factory_items.add_child(_item_button("Ergitme tesisi", "factory", FactoryVisual, 0.34))
+	_factory_items.add_child(_item_button("Montaj fabrikası", "assembly", FactoryVisual, 0.34))
 	_catalog.resized.connect(_place)
 
 
@@ -299,6 +302,8 @@ func _item_button(tooltip: String, kind: String, visual_script: GDScript, thumb_
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	button.add_child(viewport)
 	var visual: Node2D = visual_script.new()
+	if kind == "assembly":
+		visual.kind = "assembly"
 	visual.position = Vector2(48, 44)
 	visual.scale = Vector2.ONE * thumb_scale
 	if "ghost" in visual:
@@ -430,7 +435,7 @@ func _draw_output_icon(icon: Control) -> void:
 		icon.draw_circle(Vector2(11.5, 11.4), 6.4, Color("#e3b448"))
 		icon.draw_line(Vector2(11.5, 7.5), Vector2(11.5, 15.5), Color("#b07d24"), 1.4)
 		return
-	if icon.get_meta("kind", "") == "factory":
+	if icon.get_meta("kind", "") in ["factory", "assembly"]:
 		# Sawtooth roof and a chimney
 		icon.draw_rect(Rect2(2, 9, 20, 10), Color("#b4654a"))
 		for k in 3:
@@ -481,6 +486,8 @@ func _show_info() -> void:
 	if _info_visual != null:
 		_info_visual.queue_free()
 	_info_visual = (details["script"] as GDScript).new()
+	if details.has("factory_kind"):
+		_info_visual.kind = details["factory_kind"]
 	_info_visual.position = Vector2(172, 85)
 	_info_visual.scale = Vector2.ONE * details.get("scale", 1.08)
 	if "ghost" in _info_visual:
@@ -502,8 +509,11 @@ func _building_details(kind: String) -> Dictionary:
 		"mine_storage":
 			details = {"title": "Maden Deposu", "description": "Menzilindeki madenlerin cevherini toplar, kamyonlara yükler.", "output": "%s/cevher" % Wallet.format(Mining.STORAGE_CAPACITY), "script": MineStorageVisual}
 		"factory":
-			details = {"title": "Fabrika", "description": "Parsellerine çelik ya da parça hattı kurulur; yer varsa parsel satın alınıp büyür. Kamyonlar hammadde getirir, ürünü alır.",
-				"output": "4 parsel · en çok 8", "script": FactoryVisual, "scale": 0.62}
+			details = {"title": "Ergitme Tesisi", "description": "Cevherden metal yapar. Parsellerine çelik hattı (demir + kömür) kurulur; yer varsa parsel satın alınıp büyür.",
+				"output": "4 parsel · en çok 8", "script": FactoryVisual, "scale": 0.62, "factory_kind": "smelter"}
+		"assembly":
+			details = {"title": "Montaj Fabrikası", "description": "Metalden ürün yapar. Parsellerine parça hattı (çelik + bakır) kurulur; çelik kamyonla bir ergitme tesisinden gelir. Toplam %d evde açılır." % TownDemand.PARTS_UNLOCK,
+				"output": "4 parsel · en çok 8", "script": FactoryVisual, "scale": 0.62, "factory_kind": "assembly"}
 		"sales_depot":
 			details = {"title": "Satış Deposu", "description": "Kasabanın istediği malları satar. Talebe kadar tam fiyat, fazlasına %25 ödenir. Kasaba büyüdükçe yeni ürün ister.",
 				"output": "Satış", "script": SalesDepotVisual}

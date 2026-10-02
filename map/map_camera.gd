@@ -1,5 +1,9 @@
 extends Camera2D
 
+## Closest zoom: buildings are drawn at about a third of their art size (depot_placer.gd), so the
+## campus details need this much to read
+const MAX_ZOOM := 10.0
+
 var world_size := Vector2(5600, 3600)
 var move_speed := 850.0
 var dragging := false
@@ -35,7 +39,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _zoom_at_mouse(factor: float) -> void:
 	var old_zoom := zoom.x
-	var new_zoom := clampf(old_zoom * factor, _whole_map_zoom(), 2.4)
+	var new_zoom := clampf(old_zoom * factor, _whole_map_zoom(), MAX_ZOOM)
 	var from_center := get_viewport().get_mouse_position() - get_viewport_rect().size * 0.5
 	position += from_center * (1.0 / old_zoom - 1.0 / new_zoom)
 	zoom = Vector2.ONE * new_zoom

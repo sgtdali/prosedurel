@@ -50,7 +50,7 @@ gönderip kullanılamayan çeliği satışa döner.
 Yerleşke png_map'teki tek fabrika: bantlı iç sahne ve kodu (`factory/`, `ui/factory_view.gd`, rozet, eski
 fabrika görseli, ilgili testler) silindi.
 
-- Bina: `visuals/factory_campus_map.gd` yerleşkeyi kapısı yola bakacak şekilde döndürür (harita ölçeği 0,62);
+- Bina: `visuals/factory_campus_map.gd` yerleşkeyi kapısı yola bakacak şekilde döndürür (harita ölçeği 0,31, `docs/sanayi_cografyasi.md` "Ölçek");
   yapı menüsü `visuals/factory_campus_thumb.gd` ile örnek yerleşkeyi gösterir. Fabrika 6.000, 4 boş parselle gelir.
 - Kayıt: `buildings/depot_placer.gd` fabrika kaydında `factory` (LineFactory, cüzdandan öder). Parsel satın almak
   (`grow_factory`) yerleşkeyi yoldan uzağa bir parsel genişletir; yer yoksa nedeni ("Alan dolu", "Nehir üzerinde")
@@ -65,6 +65,31 @@ fabrika görseli, ilgili testler) silindi.
 - Bilinen eksik: başka fabrikadan kamyonla çelik getirmek (fabrikadan fabrikaya rota) şimdilik yok; parça hattı
   çeliği yalnız kendi yerleşkesinin çelik hatlarından alır. Haritadaki kamyonlar kapıda durur, yerleşkenin
   içindeki şeritte görünmez.
+
+## Uzmanlaşmış fabrikalar (deneme, 2026-10-02)
+
+Sorun: bir yerleşkenin yuvalarına hem çelik hem parça hattı kurulabildiği için bütün zincir tek binada bitiyordu.
+İkinci fabrikaya, fabrikadan fabrikaya taşımaya ve fabrikanın nerede durduğuna dair bir karar doğmuyordu
+(`sanayi_cografyasi.md`). "Kamyonlu Factorio"ya kaymamak için iki kuralla birlikte:
+
+**Karar: her yerleşke bir süreç türüdür**, türünü kurarken seçer; ne ürettiğini parsellerine kurulan hatlar
+(modüller) belirler:
+- Ergitme tesisi: cevherden metal. Şimdilik çelik hattı (demir + kömür → çelik); ileride bakır külçe vb.
+- Montaj fabrikası: metalden ürün. Şimdilik parça hattı (çelik + bakır → makine parçası); ileride kablo, alet vb.
+  Nüfus açılımına kadar kilitli.
+- Montajın çeliği kamyonla bir ergitme tesisinden gelir (fabrikadan fabrikaya rota). Çelik makası kalktı.
+- Giriş bunkerleri ve çıkış sahaları türün hatlarının girdi/çıktılarından oluşur; yeni modül gelince yerleşke
+  kendiliğinden yeni bunker / saha gösterir. Aynı malı isteyen farklı hatlar stoğu ihtiyaçları oranında paylaşır.
+
+Kurallar:
+1. **Bir süreç = bir bina türü; bir hat, aynı binadaki başka bir hattın ürününü kullanamaz.** Hatlar yalnız
+   kamyonla gelen bunkerlerden alır; tarifler buna göre kurulur (ergitme hammaddeden, montaj metalden). Böylece
+   zincir haritada en az bir kez binadan binaya geçer; kısa tutulur (en çok 3–4 halka).
+2. **Büyümek yuvayla olur.** Aynı malın üretimini artırmak için aynı yerleşkeye hat eklenir; yeni bina ve yeni rota
+   gerekmez, mevcut rotaya kamyon eklenir. Haritadaki bina ve rota sayısı üretim hacmiyle değil mal çeşidiyle artar.
+
+Ölçüt: oyuncunun zamanı "şunu şuna bağla" ile değil "parçayı nerede üreteyim, bu yol yetiyor mu, o kasabaya ulaşmaya
+değer mi" ile geçmeli.
 
 ## Görseller: Blender (2026-10-01)
 

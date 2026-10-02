@@ -23,9 +23,9 @@ func run() -> void:
 	var wallet = map.get_node("Wallet")
 	var hauling = map.get_node("Hauling")
 	var roads
-	# The parts line is locked on a factory's tray until the population unlock
+	# The parts line is locked on an assembly works' tray until the population unlock
 	wallet.money = 100000
-	var factory := LineFactory.new()
+	var factory := LineFactory.new(0, "assembly")
 	factory.wallet = wallet
 	check(not demand.can_build("parts"), "parts line locked before threshold")
 	var tray := CampusActions.plot_menu(factory, 1, demand.can_build("parts"))
@@ -36,19 +36,34 @@ func run() -> void:
 	demand.refresh_progression()
 	check(demand.can_build("parts") and demand.required_goods(town).has("machine_parts"), "population unlock and local demand")
 	check(CampusActions.choose(factory, CampusActions.plot_menu(factory, 1, demand.can_build("parts")), "parts", func() -> bool: return false), "parts line not built after unlock")
-	check(factory.build(0, "steel"), "steel line")
-	factory.parts_share = 1.0
-	# Ore arrives through the truck unloading API, then the steel and parts lines.
-	var record := {"factory": factory}
-	for ore in ["iron", "coal", "copper"]:
+	# A smelting works makes steel; a truck takes it to the assembly works, which makes parts
+	var steelworks := LineFactory.new(0, "smelter")
+	steelworks.wallet = wallet
+	check(steelworks.build(0, "steel"), "steel line")
+	var steel_record := {"kind": "factory", "factory": steelworks}
+	var record := {"kind": "factory", "factory": factory}
+	for ore in ["iron", "coal"]:
 		var input_truck := Hauling.Truck.new()
-		input_truck.dropoff = record
+		input_truck.dropoff = steel_record
 		input_truck.ore = ore
 		input_truck.amount = 20
-		check(hauling._unload(input_truck) and factory.in_amount(ore) == 20, ore + " delivered to the factory pile")
+		check(hauling._unload(input_truck) and steelworks.in_amount(ore) == 20, ore + " delivered to the steel factory")
+	for i in 400:
+		steelworks.advance(0.1)
+	var steel_truck := Hauling.Truck.new()
+	steel_truck.pickup = steel_record
+	steel_truck.dropoff = record
+	steel_truck.waited = 100.0
+	check(hauling._load_from_factory(steel_truck) and steel_truck.ore == "steel" and steel_truck.amount >= 8, "steel loaded for the parts factory: %s %d" % [steel_truck.ore, steel_truck.amount])
+	check(hauling._unload(steel_truck) and factory.in_amount("steel") >= 8, "steel delivered to the parts factory")
+	var copper_truck := Hauling.Truck.new()
+	copper_truck.dropoff = record
+	copper_truck.ore = "copper"
+	copper_truck.amount = 20
+	check(hauling._unload(copper_truck) and factory.in_amount("copper") == 20, "copper delivered to the parts factory")
 	for i in 600:
 		factory.advance(0.1)
-	check(factory.ready_amount("machine_parts") >= 9, "iron+coal -> steel -> parts: %d" % factory.ready_amount("machine_parts"))
+	check(factory.ready_amount("machine_parts") >= 7, "steel+copper -> parts: %d" % factory.ready_amount("machine_parts"))
 	factory.outputs = {"steel": 0.0, "machine_parts": 20.0}
 	var sales := {"kind": "sales", "town": town, "center": town["center"]}
 	var truck := Hauling.Truck.new()

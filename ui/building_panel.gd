@@ -224,9 +224,8 @@ func _refresh() -> void:
 					built += 1
 			lines.append("Hat: %d / %d parsel · %s" % [built, factory.slots, "çalışıyor" if Factories.is_working(factory) else "duruyor"])
 			var piles: Array[String] = []
-			for good in LineFactory.INPUT_GOODS:
-				if factory.takes(good) or factory.in_amount(good) > 0:
-					piles.append("%s %d" % [Goods.name_of(good), factory.in_amount(good)])
+			for good in factory.input_goods():
+				piles.append("%s %d" % [Goods.name_of(good), factory.in_amount(good)])
 			lines.append("Girdi: " + (", ".join(piles) if not piles.is_empty() else "hat yok"))
 			var ready := {}
 			for good in LineFactory.OUTPUT_GOODS:

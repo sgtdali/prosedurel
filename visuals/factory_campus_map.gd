@@ -4,7 +4,7 @@ extends Node2D
 ## A factory on the map (buildings/depot_placer.gd): the campus (factory_campus_visual.gd) turned
 ## so its gate faces +y, the way every building faces its road. In these coordinates the campus
 ## stands on the road side and grows away from it (-y) by one plot per slot bought.
-## Also the ghost while placing and the build menu's thumbnail (no factory: an empty campus).
+## Also the ghost while placing (no factory: an empty campus of `kind`).
 
 const CampusVisual = preload("res://visuals/factory_campus_visual.gd")
 const LineFactory = preload("res://economy/line_factory.gd")
@@ -13,11 +13,17 @@ const LineFactory = preload("res://economy/line_factory.gd")
 const ENTRY := Vector2(-86.0, 130.0)
 
 var campus: CampusVisual
+## The kind of factory shown while there is none yet (the ghost)
+var kind := "smelter":
+	set(value):
+		kind = value
+		if factory == null:
+			campus.factory = LineFactory.new(0, kind)
 var factory: LineFactory:
 	set(value):
 		factory = value
 		if campus != null:
-			campus.factory = value if value != null else LineFactory.new()
+			campus.factory = value if value != null else LineFactory.new(0, kind)
 ## The access road reaches the gate (kept for the placer like the other buildings)
 var connected := false
 

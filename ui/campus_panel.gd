@@ -2,11 +2,10 @@ extends Control
 
 ## Clicking a factory campus on the map (visuals/factory_campus_visual.gd, docs/hat_fabrikasi.md;
 ## what each click does is ui/campus_actions.gd, shared with the sandbox): a plot opens its tray
-## (build a steel or parts line, speed one up or take it out), the plot for sale beyond the
+## (build the factory's line, speed one up or take it out), and the plot for sale beyond the
 ## fence opens a tray to buy it - bought only when the ground there is free
-## (buildings/depot_placer.gd grow_factory, else the reason shows by the mouse) - and the steel
-## switch turns a quarter more of the steel to the parts lines. The parts line stays locked
-## until the population unlock (economy/town_demand.gd). Hovering any of these, or a pile, names
+## (buildings/depot_placer.gd grow_factory, else the reason shows by the mouse). Hovering any of
+## these, or a pile, names
 ## it in a short tip by the mouse. Clicks anywhere else on a factory go on to the building card
 ## (building_panel.gd). Esc closes an open tray.
 
@@ -148,8 +147,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			if not (same_record and menu.get("plot", -2) == -1):
 				campus.menu = CampusActions.annex_menu(factory)
 				_open = record
-		"switch":
-			factory.parts_share = CampusActions.next_share(factory.parts_share)
 		_:
 			# Piles and the yard: the building card shows the stocks
 			return

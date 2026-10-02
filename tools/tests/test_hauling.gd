@@ -15,6 +15,8 @@ extends SceneTree
 ## depot panel open) or the failed check.
 ## Usage: godot --path <project> --script res://tools/tests/test_hauling.gd [-- <screenshot.png>]
 
+const RoadNetwork = preload("res://roads/road_network.gd")
+
 var map: Node2D
 var placer: Node2D
 var roads: Node2D
@@ -62,10 +64,16 @@ func _build() -> void:
 			return
 		placer._place_building()
 	placer.select_building("mine_storage")
-	if not _check(_find_site_near(_mines_middle(), 60, 420, _mines_covered), "no yard site"):
+	# Covering the mines first, then on a road (the yard's range is small next to the map's roads)
+	if not _check(_find_site_near(_mines_middle(), 20, 420, func() -> int: return _mines_covered() * 2 + _ghost_connected(), false), "no yard site"):
 		return
 	placer._place_building()
 	var yard_record: Dictionary = placer.storage_records()[0]
+	if not yard_record["marker"].connected:
+		# Too far from a road to join on its own: draw one to the nearest road, as a player would
+		var nearest: Dictionary = placer._nearest_road(yard_record["entry"])
+		roads.network.add_road(PackedVector2Array([yard_record["entry"], nearest["point"]]), RoadNetwork.SNAP_DISTANCE, RoadNetwork.ROAD, true)
+		roads.refresh()
 	if not _check(yard_record["marker"].connected, "yard not on a road"):
 		return
 	placer.select_building("depot")
@@ -249,7 +257,18 @@ func _haul() -> void:
 	# A click on a route's line picks it
 	hauling.select_route(null)
 	var line: PackedVector2Array = hauling._route_line(steel_route.pickup, steel_route.dropoff)
-	await _click_world(camera, line[line.size() / 2])
+	# A point of its line that no other route's line runs along (they can share roads), off any
+	# building and out of towns (a click there picks those)
+	var spot := line[line.size() / 2]
+	for k in line.size():
+		var in_town := false
+		for candidate in cities.towns:
+			if line[k].distance_to(candidate["center"]) <= cities.town_radius(candidate) + 40.0:
+				in_town = true
+		if not in_town and placer.building_at(line[k]).is_empty() and hauling.route_at(line[k]) == steel_route:
+			spot = line[k]
+			break
+	await _click_world(camera, spot)
 	_check(hauling.selected_route == steel_route, "clicking the steel route's line did not pick it")
 	# Off the route: it delivers any load, drives home and can be sold
 	_check(hauling.remove_truck(ore_route) and ore_route.trucks.size() == 1 and second.route == null, "truck not taken off the route")
@@ -323,8 +342,8 @@ func _ghost_connected() -> int:
 
 
 ## The valid site around `middle` (between the two radii) scoring highest; leaves the placer's
-## ghost there. False if there is none.
-func _find_site_near(middle: Vector2, from: int, to: int, score: Callable) -> bool:
+## ghost there (the nearest radius with any, unless `nearest` is false). False if there is none.
+func _find_site_near(middle: Vector2, from: int, to: int, score: Callable, nearest := true) -> bool:
 	var best := Vector2.INF
 	var best_score := 0
 	for radius in range(from, to, 20):
@@ -337,7 +356,7 @@ func _find_site_near(middle: Vector2, from: int, to: int, score: Callable) -> bo
 			if value > best_score:
 				best = placer._cursor
 				best_score = value
-		if best != Vector2.INF:
+		if nearest and best != Vector2.INF:
 			break
 	if best == Vector2.INF:
 		return false

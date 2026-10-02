@@ -4,12 +4,12 @@ extends Node2D
 ## economy/line_factory.gd, docs/hat_fabrikasi.md): one factory on a patch of map, run on the
 ## game clock and paid from the wallet, with the map's money and speed panels and camera.
 ## Everything is done by clicking the campus:
-## - an empty plot: a tray to build a steel or parts line; a line: upgrade or take it out;
+## - an empty plot: a tray to build one of the works' lines; a line: upgrade or take it out;
 ## - the plot for sale beyond the fence: buy it (one more slot, the campus widens);
-## - the steel switch: turn a quarter more of the steel to the parts lines (round to none);
 ## - a bay (stand-in for the map's routes): trucks come more often for it, round to none.
 ## Trucks drive in from the road, unload at the input bays or load at the output yard and sell
-## (steel 200, parts 600). Esc or a click elsewhere closes a tray; Space pauses, 1-3 speed.
+## (steel 200, parts 600). K starts over with the other kind of works (smelting / assembly). Esc or a
+## click elsewhere closes a tray; Space pauses, 1-3 speed.
 
 const LineFactory = preload("res://economy/line_factory.gd")
 const CampusActions = preload("res://ui/campus_actions.gd")
@@ -35,9 +35,16 @@ var _until := {}
 
 
 func _ready() -> void:
-	factory = LineFactory.new()
+	_start("smelter")
+
+
+## A new, empty factory of `kind`
+func _start(kind: String) -> void:
+	factory = LineFactory.new(0, kind)
 	factory.wallet = wallet
 	campus.factory = factory
+	campus.menu = {}
+	campus.trucks.clear()
 	campus.rates = rates
 	for good in rates:
 		_until[good] = 0.0
@@ -58,12 +65,12 @@ func _process(delta: float) -> void:
 
 func _send_trucks(dt: float) -> void:
 	for good in rates:
-		if rates[good] <= 0.0:
+		if rates[good] <= 0.0 or not (factory.input_goods().has(good) or factory.output_goods().has(good)):
 			continue
 		_until[good] -= dt
 		if _until[good] <= 0.0:
 			_until[good] += TRUCK_LOAD / rates[good]
-			var incoming := LineFactory.INPUT_GOODS.has(good)
+			var incoming := factory.input_goods().has(good)
 			campus.trucks.append({"x": campus.gate_x() - 120.0, "good": good, "loaded": incoming, "dir": 1.0, "wait": 0.0})
 
 
@@ -106,6 +113,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		campus.menu = {}
 		get_viewport().set_input_as_handled()
 		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_K:
+		_start("assembly" if factory.kind == "smelter" else "smelter")
+		get_viewport().set_input_as_handled()
+		return
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
 		return
 	var target: Dictionary = campus.target_at(campus.to_local(get_global_mouse_position()))
@@ -120,8 +131,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		"annex":
 			if menu.get("plot", -2) != -1:
 				campus.menu = CampusActions.annex_menu(factory)
-		"switch":
-			factory.parts_share = CampusActions.next_share(factory.parts_share)
 		"bay", "out":
 			var good: String = target["good"]
 			rates[good] = _next(RATE_STEPS, rates[good])

@@ -17,13 +17,17 @@ const FlowMeter = preload("res://economy/flow_meter.gd")
 const RATES := {"iron": 2, "copper": 2, "coal": 2}
 const ORE_COLORS := {"iron": Color("#913926"), "copper": Color("#d0703a"), "coal": Color("#2b2b2e")}
 ## How far a yard collects from, centre to centre
-const RANGE := 300.0
+const RANGE := 150.0
 ## What a mine holds on its own before it stops
 const MINE_CAPACITY := 60
 ## What a yard holds of each ore
 const STORAGE_CAPACITY := 600
 ## Where the gear sits above a mine's centre, and how fast ore chunks travel (units per second)
-const BADGE_OFFSET := Vector2(0.0, -58.0)
+## How far above a mine's centre its badge stands, past the top of the mine (depot_placer.gd)
+const BADGE_LIFT := 24.0
+## The badge's radius in world units, and the least it shrinks to on screen
+const BADGE_RADIUS := 6.0
+const BADGE_MIN_PIXELS := 5.0
 const HAUL_SPEED := 40.0
 const WORKING := Color("#5f9e3a")
 const STOPPED := Color("#c0452f")
@@ -194,41 +198,44 @@ func _draw_haul(mine: Dictionary, storage: Dictionary, working: bool) -> void:
 	var length := from.distance_to(to)
 	if length < 1.0:
 		return
-	var step := 10.0
+	var step := 7.0
 	var shift := fmod(_time * HAUL_SPEED, step) if working else 0.0
 	var t := shift - step
 	while t < length:
 		var a := clampf(t, 0.0, length)
 		var b := clampf(t + step * 0.55, 0.0, length)
 		if b > a:
-			draw_line(from.lerp(to, a / length), from.lerp(to, b / length), line, 2.0, true)
+			draw_line(from.lerp(to, a / length), from.lerp(to, b / length), line, 1.2, true)
 		t += step
 	if not working:
 		return
-	var chunks := maxi(1, int(length / 60.0))
+	var chunks := maxi(1, int(length / 40.0))
 	for k in chunks:
 		var at := fmod(_time * HAUL_SPEED / length + float(k) / chunks, 1.0)
 		var p := from.lerp(to, at)
-		draw_circle(p + Vector2(0.8, 1.0), 3.6, Color(0.1, 0.08, 0.05, 0.3))
-		draw_circle(p, 3.4, ore_color.darkened(0.25))
-		draw_circle(p + Vector2(-0.9, -0.9), 1.8, ore_color.lightened(0.25))
+		draw_circle(p + Vector2(0.5, 0.6), 2.0, Color(0.1, 0.08, 0.05, 0.3))
+		draw_circle(p, 1.9, ore_color.darkened(0.25))
+		draw_circle(p + Vector2(-0.5, -0.5), 1.0, ore_color.lightened(0.25))
 
 
 ## A small cream disc over the mine with a gear: green and turning while it digs, grey and still
 ## once it has stopped (ui/map_signs.gd puts a "full" balloon over it then). Mines without a yard
 ## get a bar showing their own pile.
 func _draw_badge(mine: Dictionary, working: bool, no_yard: bool) -> void:
-	var at: Vector2 = mine["center"] + BADGE_OFFSET
-	draw_circle(at + Vector2(1.0, 1.5), 12.0, Color(0.1, 0.06, 0.02, 0.3))
-	draw_circle(at, 12.0, BADGE_RIM)
-	draw_circle(at, 10.5, BADGE_BG)
+	var zoom: float = get_viewport().get_canvas_transform().get_scale().x if is_inside_tree() else 1.0
+	# Drawn at 12 units across and scaled by k
+	var k := maxf(BADGE_RADIUS, BADGE_MIN_PIXELS / maxf(zoom, 0.01)) / 12.0
+	var at: Vector2 = mine["center"] - Vector2(0.0, BADGE_LIFT + 12.0 * k)
+	draw_circle(at + Vector2(1.0, 1.5) * k, 12.0 * k, Color(0.1, 0.06, 0.02, 0.3))
+	draw_circle(at, 12.0 * k, BADGE_RIM)
+	draw_circle(at, 10.5 * k, BADGE_BG)
 	var color := WORKING if working else Color("#8a8a86")
 	var spin := _time * 2.5 if working else 0.0
-	_draw_gear(at, 7.0, spin, color)
+	_draw_gear(at, 7.0 * k, spin, color)
 	if no_yard:
-		var bar := Rect2(at + Vector2(-12.0, 15.0), Vector2(24.0, 5.0))
+		var bar := Rect2(at + Vector2(-12.0, 15.0) * k, Vector2(24.0, 5.0) * k)
 		var fill := float(mine["stock"]) / MINE_CAPACITY
-		draw_rect(bar.grow(1.0), BADGE_RIM)
+		draw_rect(bar.grow(k), BADGE_RIM)
 		draw_rect(bar, BADGE_BG)
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * fill, bar.size.y)), STOPPED if fill >= 1.0 else ORE_COLORS[mine["ore"]])
 

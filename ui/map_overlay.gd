@@ -20,8 +20,8 @@ const LineFactory = preload("res://economy/line_factory.gd")
 
 signal shown_changed(shown: bool)
 
-const CHIP := 30.0
-const MIN_PIXELS := 24.0
+const CHIP := 16.0
+const MIN_PIXELS := 16.0
 const DIM := Color(0.07, 0.06, 0.05, 0.42)
 const RING_EMPTY := Color("#c0452f")
 const RING := Color("#f1ebdc")
@@ -94,8 +94,8 @@ func _draw() -> void:
 		for mine in _mining.mines:
 			var rate: float = mine["meter"].per_day(_mining.now())
 			# Beside the mine (its problem balloon stands above it)
-			var at: Vector2 = mine["center"] + Vector2(44.0 + chip * 0.5, -30.0 - chip * 0.5)
-			_arrow(mine["center"] + Vector2(26.0, -8.0), at + Vector2(-chip * 0.4, chip * 0.4), width_for(rate) if rate > 0.0 else 0.0)
+			var at: Vector2 = mine["center"] + Vector2(22.0 + chip * 0.5, -15.0 - chip * 0.5)
+			_arrow(mine["center"] + Vector2(13.0, -4.0), at + Vector2(-chip * 0.4, chip * 0.4), width_for(rate) if rate > 0.0 else 0.0)
 			MapIcons.draw_chip(self, mine["ore"], at, chip, rate <= 0.0)
 		for record in _placer.storage_records():
 			var yard := _yard_of(record)
@@ -104,7 +104,7 @@ func _draw() -> void:
 				if yard["stock"][ore] > 0:
 					held.append(ore)
 			for k in held.size():
-				var at: Vector2 = record["center"] + Vector2((k - (held.size() - 1) * 0.5) * chip * 1.25, -46.0 - chip * 0.5)
+				var at: Vector2 = record["center"] + Vector2((k - (held.size() - 1) * 0.5) * chip * 1.25, -23.0 - chip * 0.5)
 				_ringed_chip(held[k], at, chip, float(yard["stock"][held[k]]) / Mining.STORAGE_CAPACITY)
 	for record in _placer.factory_records():
 		_draw_factory(record, chip)
@@ -114,12 +114,12 @@ func _draw() -> void:
 			if not record.has("meter"):
 				continue
 			var rate: float = record["meter"].per_day(now)
-			var at: Vector2 = record["center"] + Vector2(0.0, -48.0 - chip)
+			var at: Vector2 = record["center"] + Vector2(0.0, -24.0 - chip)
 			var good := "steel"
 			for route in _hauling.routes:
 				if is_same(route.dropoff, record) and route.last_good != "":
 					good = route.last_good
-			_arrow(at + Vector2(0.0, chip * 0.55), record["center"] + Vector2(0.0, -30.0), width_for(rate) if rate > 0.0 else 0.0)
+			_arrow(at + Vector2(0.0, chip * 0.55), record["center"] + Vector2(0.0, -15.0), width_for(rate) if rate > 0.0 else 0.0)
 			MapIcons.draw_chip(self, good, at, chip, rate <= 0.0)
 
 
@@ -176,13 +176,13 @@ func _draw_factory(record: Dictionary, chip: float) -> void:
 	var reach := maxf(half.x, half.y) * 0.5
 	for k in inputs.size():
 		var good: String = inputs[k]
-		var at := center + Vector2(-reach - 20.0 - chip, (k - (inputs.size() - 1) * 0.5) * chip * 1.2)
+		var at := center + Vector2(-reach - 10.0 - chip, (k - (inputs.size() - 1) * 0.5) * chip * 1.2)
 		var rate: float = factory.used.get(good, 0.0) * day
 		_arrow(at + Vector2(chip * 0.55, 0.0), center + Vector2(-reach, at.y - center.y), width_for(rate) if rate > 0.05 else 0.0)
 		_ringed_chip(good, at, chip, factory.inputs[good] / LineFactory.CAPACITY)
 	for k in outputs.size():
 		var good: String = outputs[k]
-		var at := center + Vector2(reach + 20.0 + chip, (k - (outputs.size() - 1) * 0.5) * chip * 1.2)
+		var at := center + Vector2(reach + 10.0 + chip, (k - (outputs.size() - 1) * 0.5) * chip * 1.2)
 		var rate: float = factory.made.get(good, 0.0) * day
 		_arrow(center + Vector2(reach, at.y - center.y), at - Vector2(chip * 0.55, 0.0), width_for(rate) if rate > 0.05 else 0.0)
 		_ringed_chip(good, at, chip, factory.outputs[good] / LineFactory.CAPACITY)

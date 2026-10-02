@@ -28,22 +28,23 @@ const RoadRules = preload("res://roads/road_rules.gd")
 const RoadVisual = preload("res://roads/road_visual.gd")
 const AccessMarker = preload("res://buildings/depot_access_marker.gd")
 
-const DEPOT_SCALE := 0.62
+const DEPOT_SCALE := 0.31
 const FOOTPRINT := Rect2(-51.0, -61.0, 115.0, 146.0)
 const ENTRY := Vector2(7.0, 85.0)
-const FACTORY_SCALE := 0.62
+const FACTORY_SCALE := 0.31
 const FACTORY_ENTRY := CampusMap.ENTRY
 const AUTO_CONNECT_RANGE := 125.0
 const CLEARANCE := 3.0
 ## Largest gap between the points a site is checked at
-const SAMPLE_STEP := 24.0
-const MINE_SCALE := 0.62
+const SAMPLE_STEP := 16.0
+const MINE_SCALE := 0.31
 const MINE_FOOTPRINT := Rect2(-72.0, -74.0, 144.0, 150.0)
 const MINE_QUARRY := Vector2(-47.0, -54.0)
 const STORAGE_FOOTPRINT := Rect2(-58.0, -66.0, 116.0, 151.0)
 const STORAGE_ENTRY := Vector2(0.0, 85.0)
 ## What each building costs to put down.
-const COSTS := {"depot": 2000, "factory": 6000, "iron_mine": 5000, "copper_mine": 6500, "coal_mine": 4500,
+## "factory" is a smelting works, "assembly" an assembly works (economy/line_factory.gd KINDS)
+const COSTS := {"depot": 2000, "factory": 6000, "assembly": 6000, "iron_mine": 5000, "copper_mine": 6500, "coal_mine": 4500,
 	"mine_storage": 4000, "sales_depot": 5000}
 const RANGE_COLOR := Color(0.98, 0.93, 0.78, 0.9)
 const VALID_TINT := Color(0.80, 1.0, 0.84, 0.79)
@@ -60,6 +61,10 @@ signal building_moved(record: Dictionary)
 @export var mining_path: NodePath = ^"../Mining"
 @export var clock_path: NodePath = ^"../Clock"
 @export var cities_path: NodePath = ^"../Cities"
+## The town demand (economy/town_demand.gd): a parts factory waits for the population unlock
+@export var demand_path: NodePath = ^"../Demand"
+## The lone trees (map/lone_trees.gd): a building fells the ones on its site
+@export var trees_path: NodePath = ^"../LoneTrees"
 
 var building := false:
 	set = set_building
@@ -179,10 +184,20 @@ func select_building(kind: String) -> void:
 	_update_ghost()
 
 
+## Both kinds of works are the same campus with different lines
+static func _is_factory(kind: String) -> bool:
+	return kind == "factory" or kind == "assembly"
+
+
+## The line factory kind for a works building
+static func _factory_kind(kind: String) -> String:
+	return "assembly" if kind == "assembly" else "smelter"
+
+
 func _scale_of(kind: String) -> float:
 	if kind.ends_with("_mine"):
 		return MINE_SCALE
-	if kind == "factory":
+	if _is_factory(kind):
 		return FACTORY_SCALE
 	return DEPOT_SCALE
 
@@ -248,6 +263,11 @@ func _building_problem(at: Vector2, angle: float) -> String:
 		return _mine_problem(at, angle)
 	match selected_building:
 		"factory": return _factory_problem(at, angle)
+		"assembly":
+			var demand := get_node_or_null(demand_path)
+			if demand != null and not demand.can_build("parts"):
+				return "Montaj fabrikası toplam %d evde açılır" % demand.PARTS_UNLOCK
+			return _factory_problem(at, angle)
 		"mine_storage": return _site_problem(at, angle, STORAGE_FOOTPRINT, DEPOT_SCALE)
 		"sales_depot":
 			if _cities == null or _cities.town_at(at).is_empty():
@@ -318,7 +338,7 @@ func grow_factory(record: Dictionary) -> String:
 	if problem == "":
 		var geometry := _geometry("factory", visual.position, visual.rotation, visual)
 		record["center"] = geometry["center"]
-		record["obstacle"] = _roads.network.add_box(geometry["label"], geometry["center"], geometry["size"], visual.rotation, record["entry"])
+		record["obstacle"] = _add_site(geometry["label"], geometry["center"], geometry["size"], visual.rotation, record["entry"])
 		buildings_changed.emit()
 	else:
 		_roads.network.obstacles.append(record["obstacle"])
@@ -382,7 +402,7 @@ func _entry_at(at: Vector2, angle: float) -> Vector2:
 
 func _access_entry_at(at: Vector2, angle: float) -> Vector2:
 	match selected_building:
-		"factory": return at + (FACTORY_ENTRY * FACTORY_SCALE).rotated(angle)
+		"factory", "assembly": return at + (FACTORY_ENTRY * FACTORY_SCALE).rotated(angle)
 		"mine_storage": return at + (STORAGE_ENTRY * DEPOT_SCALE).rotated(angle)
 		"sales_depot": return at + (SalesDepotVisual.ENTRY * DEPOT_SCALE).rotated(angle)
 		_: return at + (ENTRY * DEPOT_SCALE).rotated(angle)
@@ -541,6 +561,15 @@ func _pay() -> bool:
 	return _wallet == null or _wallet.spend(COSTS[selected_building])
 
 
+## A building's site as an obstacle for roads and buildings; the trees on it are felled.
+func _add_site(label: String, center: Vector2, size: Vector2, angle: float, entry := Vector2.INF) -> Dictionary:
+	var obstacle: Dictionary = _roads.network.add_box(label, center, size, angle, entry)
+	var trees := get_node_or_null(trees_path)
+	if trees != null:
+		trees.clear_site(obstacle)
+	return obstacle
+
+
 func _place_building() -> void:
 	if not _moving.is_empty():
 		_finish_move()
@@ -556,7 +585,7 @@ func _place_building() -> void:
 		add_child(mine)
 		mines.append(mine)
 		var center := _cursor + (MINE_FOOTPRINT.get_center() * MINE_SCALE).rotated(_angle)
-		var obstacle: Dictionary = _roads.network.add_box("maden", center, MINE_FOOTPRINT.size * MINE_SCALE, _angle)
+		var obstacle: Dictionary = _add_site("maden", center, MINE_FOOTPRINT.size * MINE_SCALE, _angle)
 		var ore := selected_building.trim_suffix("_mine")
 		_mine_records.append({"kind": "mine", "ore": ore, "visual": mine, "center": center, "obstacle": obstacle,
 			"name": {"iron": "Demir madeni", "copper": "Bakır madeni", "coal": "Kömür madeni"}[ore]})
@@ -564,7 +593,7 @@ func _place_building() -> void:
 			_mining.add_mine(ore, center, mine)
 		building = false
 		buildings_changed.emit()
-	elif selected_building == "factory":
+	elif _is_factory(selected_building):
 		_place_factory()
 	elif selected_building == "mine_storage":
 		_place_storage()
@@ -580,7 +609,10 @@ func _is_mine() -> bool:
 
 func _new_visual(kind: String) -> Node2D:
 	match kind:
-		"factory": return CampusMap.new()
+		"factory", "assembly":
+			var campus := CampusMap.new()
+			campus.kind = _factory_kind(kind)
+			return campus
 		"iron_mine": return IronMineVisual.new()
 		"copper_mine": return CopperMineVisual.new()
 		"coal_mine": return CoalMineVisual.new()
@@ -607,7 +639,7 @@ func _place_depot() -> void:
 	add_child(depot)
 	depots.append(depot)
 	var center := _cursor + (FOOTPRINT.get_center() * DEPOT_SCALE).rotated(_angle)
-	var obstacle: Dictionary = _roads.network.add_box("lojistik depo", center, FOOTPRINT.size * DEPOT_SCALE, _angle, entry)
+	var obstacle: Dictionary = _add_site("lojistik depo", center, FOOTPRINT.size * DEPOT_SCALE, _angle, entry)
 	_roads.network.access_points.append(entry)
 	var marker := AccessMarker.new()
 	marker.position = entry
@@ -628,7 +660,7 @@ func _place_factory() -> void:
 		return
 	var entry := _access_entry_at(_cursor, _angle)
 	var factory := CampusMap.new()
-	var lines := LineFactory.new()
+	var lines := LineFactory.new(0, _factory_kind(selected_building))
 	lines.wallet = _wallet
 	factory.factory = lines
 	factory.position = _cursor
@@ -639,14 +671,14 @@ func _place_factory() -> void:
 	factories.append(factory)
 	var footprint := factory.current_footprint()
 	var center := _cursor + (footprint.get_center() * FACTORY_SCALE).rotated(_angle)
-	var obstacle: Dictionary = _roads.network.add_box("fabrika", center, footprint.size * FACTORY_SCALE, _angle, entry)
+	var obstacle: Dictionary = _add_site("fabrika", center, footprint.size * FACTORY_SCALE, _angle, entry)
 	_roads.network.access_points.append(entry)
 	var marker := AccessMarker.new()
 	marker.position = entry
 	marker.z_index = 4
 	add_child(marker)
 	_factory_records.append({"kind": "factory", "entry": entry, "marker": marker, "visual": factory, "center": center, "obstacle": obstacle,
-		"factory": lines, "name": "Fabrika %d" % (_factory_records.size() + 1)})
+		"factory": lines, "name": "%s %d" % [LineFactory.KINDS[lines.kind]["name"], _factory_records.size() + 1]})
 	if not _connection_path.is_empty():
 		_roads.build_access_road(_connection_path)
 	else:
@@ -667,7 +699,7 @@ func _place_storage() -> void:
 	add_child(storage)
 	storages.append(storage)
 	var center := _storage_center(_cursor, _angle)
-	var obstacle: Dictionary = _roads.network.add_box("maden deposu", center, STORAGE_FOOTPRINT.size * DEPOT_SCALE, _angle, entry)
+	var obstacle: Dictionary = _add_site("maden deposu", center, STORAGE_FOOTPRINT.size * DEPOT_SCALE, _angle, entry)
 	_roads.network.access_points.append(entry)
 	var marker := AccessMarker.new()
 	marker.position = entry
@@ -696,7 +728,7 @@ func _place_sales_depot() -> void:
 	depot.z_index = 2
 	add_child(depot)
 	var center := _cursor + (SalesDepotVisual.SIZE.get_center() * DEPOT_SCALE).rotated(_angle)
-	var obstacle: Dictionary = _roads.network.add_box("satış deposu", center, SalesDepotVisual.SIZE.size * DEPOT_SCALE, _angle, entry)
+	var obstacle: Dictionary = _add_site("satış deposu", center, SalesDepotVisual.SIZE.size * DEPOT_SCALE, _angle, entry)
 	_roads.network.access_points.append(entry)
 	var marker := AccessMarker.new()
 	marker.position = entry
@@ -825,7 +857,7 @@ func _finish_move() -> void:
 	visual.rotation = angle
 	var geometry := _geometry(kind, _cursor, angle, visual)
 	record["center"] = geometry["center"]
-	record["obstacle"] = _roads.network.add_box(geometry["label"], geometry["center"], geometry["size"], angle,
+	record["obstacle"] = _add_site(geometry["label"], geometry["center"], geometry["size"], angle,
 		geometry.get("entry", Vector2.INF))
 	if geometry.has("entry"):
 		record["entry"] = geometry["entry"]

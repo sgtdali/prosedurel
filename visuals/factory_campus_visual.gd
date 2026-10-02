@@ -6,19 +6,18 @@ extends Node2D
 ## in Blender (blender/scripts/create_campus_kit.py and render_furnace_topdown.py, copied to
 ## visuals/art/); the conveyors, flowing goods, smoke, balloons and trays are drawn here, since
 ## they follow the lines and the stocks. Goods flow left to right:
-## - top: the truck lane from the gate (the road comes in on the left); input bunkers (iron,
-##   coal, copper; the pile picture steps through five sizes with the stock) on the left, the
-##   office, the output yards (steel coils, parts crates, by the stock) on the right;
-## - under them the conveyor rack: iron / coal / copper run from the bunkers' draw-off hoppers to
-##   the plots that take them, steel and parts run to the output yards; moving dots show what
-##   flows, thinner when less flows;
+## - top: the truck lane from the gate (the road comes in on the left); the input bunkers of the
+##   works' lines on the left (a smelting works: iron, coal; an assembly works: steel, copper;
+##   the pile picture steps through five sizes with the stock), the office, an output yard per
+##   product (steel coils, parts crates, by the stock) on the right;
+## - under them the conveyor rack: the inputs run from the bunkers' draw-off hoppers to the
+##   plots that use them, each product runs to its yard; moving dots show what flows, thinner when less
+##   flows;
 ## - the plots (one per open slot): a steel line is the smelting furnace (glowing, smoking while
 ##   it runs) fed through the hopper on its chute, pouring steel from its spout; a parts line is
 ##   the sawtooth workshop (skylights lit while it runs) with its intakes and outlet on its north
 ##   wall; an empty plot is surveyed gravel with a plus; level lamps in a corner; a balloon names
 ##   what stops a line (the missing good, or a full crate when the output is full);
-## - the steel switch on the steel lane before the first parts line, its ring showing the share
-##   of steel turned to parts;
 ## - right of the fence the next plot for sale, while slots can still be opened.
 ## Layers, bottom up: ground (this node), floor pictures, conveyors, buildings, what stands above
 ## them, then the upright tray. The campus widens by one plot per opened slot. `trucks`, `hover`,
@@ -34,8 +33,8 @@ const LANE_TOP := -94.0
 const LANE_H := 16.0
 const BAY_TOP := -74.0
 const BAY_H := 28.0
-const INPUT_BAYS := {"iron": Rect2(-122.0, BAY_TOP, 30.0, BAY_H), "coal": Rect2(-88.0, BAY_TOP, 30.0, BAY_H),
-	"copper": Rect2(-54.0, BAY_TOP, 30.0, BAY_H)}
+## Where the input bunkers stand, in the order of the factory's recipe
+const BAY_XS: Array[float] = [-122.0, -88.0, -54.0]
 ## Conveyor rack lanes (y): inputs, then outputs
 const RACK := {"iron": -36.0, "coal": -32.0, "copper": -28.0, "steel": -24.0, "machine_parts": -20.0}
 ## Depth of the rack picture (5.430 x 1.867 m)
@@ -71,7 +70,7 @@ const OK := Color("#4caf3a")
 var factory: LineFactory
 ## [{x, good, loaded, dir}] trucks on the lane
 var trucks: Array = []
-## What the mouse is over: {kind: "plot" / "annex" / "switch" / "bay" / "out", index / good}
+## What the mouse is over: {kind: "plot" / "annex" / "bay" / "out", index / good}
 var hover := {}
 ## The open build menu over a plot: {plot, options: [{id, price, enabled}]}
 var menu := {}
@@ -136,24 +135,29 @@ func _draw() -> void:
 	_place_upright()
 
 
-static func _demo() -> LineFactory:
-	var f := LineFactory.new(100000)
-	f.build(0, "steel")
-	f.build(1, "steel")
+## A works of `kind` with three lines in different states, for the editor and the build menu
+static func _demo(kind := "smelter") -> LineFactory:
+	var f := LineFactory.new(100000, kind)
+	var line: String = f.line_kinds()[0]
+	f.build(0, line)
+	f.build(1, line)
 	f.upgrade(1)
-	f.build(2, "parts")
-	f.parts_share = 0.5
-	f.inputs = {"iron": 160.0, "coal": 20.0, "copper": 110.0}
-	f.outputs = {"steel": 120.0, "machine_parts": 60.0}
+	f.build(2, line)
+	var first: String = f.input_goods()[0]
+	var second: String = f.input_goods()[1]
+	f.inputs[first] = 160.0
+	f.inputs[second] = 20.0
+	var product: String = LineFactory.info(line)["outputs"].keys()[0]
+	f.outputs[product] = 120.0
 	f.lines[0]["rate"] = 1.0
 	f.lines[0]["status"] = "working"
 	f.lines[1]["rate"] = 0.1
 	f.lines[1]["status"] = "starved"
-	f.lines[1]["short"] = "coal"
+	f.lines[1]["short"] = second
 	f.lines[2]["rate"] = 0.9
 	f.lines[2]["status"] = "working"
-	f.used = {"iron": 1.2, "coal": 1.2, "copper": 0.45}
-	f.made = {"steel": 0.6, "machine_parts": 0.45}
+	f.used = {first: 0.9, second: 0.9}
+	f.made = {product: 0.5}
 	return f
 
 
@@ -183,16 +187,30 @@ func has_annex() -> bool:
 	return factory.slots < LineFactory.MAX_SLOTS
 
 
-func output_bay(good: String) -> Rect2:
-	var x := right_edge() - (106.0 if good == "steel" else 54.0)
-	return Rect2(x, BAY_TOP, 46.0, BAY_H)
+## The input bunkers of the works' lines: good -> its rect
+func input_bays() -> Dictionary:
+	var out := {}
+	var goods := factory.input_goods()
+	for k in goods.size():
+		out[goods[k]] = Rect2(BAY_XS[k], BAY_TOP, 30.0, BAY_H)
+	return out
+
+
+## The yards where the products wait for trucks: good -> its rect, from the right edge leftwards
+func output_bays() -> Dictionary:
+	var out := {}
+	var goods := factory.output_goods()
+	for k in goods.size():
+		out[goods[k]] = Rect2(right_edge() - 54.0 - k * 52.0, BAY_TOP, 46.0, BAY_H)
+	return out
 
 
 ## Where a truck stops for `good`
 func truck_stop(good: String) -> float:
-	if INPUT_BAYS.has(good):
-		return INPUT_BAYS[good].get_center().x
-	return output_bay(good).get_center().x
+	var bays := input_bays()
+	if bays.has(good):
+		return bays[good].get_center().x
+	return output_bays().get(good, Rect2()).get_center().x
 
 
 func gate_x() -> float:
@@ -220,20 +238,14 @@ func _port_x(i: int, good: String) -> float:
 	return p.position.x + 46.0
 
 
-func _plots_of(kind: String) -> Array[int]:
+## The plots whose line takes (side "inputs") or makes (side "outputs") `good`
+func _plots_using(good: String, side: String) -> Array[int]:
 	var out: Array[int] = []
 	for i in factory.lines.size():
-		if factory.lines[i].get("kind", "") == kind:
+		var line: Dictionary = factory.lines[i]
+		if not line.is_empty() and LineFactory.info(line["kind"])[side].has(good):
 			out.append(i)
 	return out
-
-
-## The steel switch sits on the steel lane just before the first parts line's drop
-func switch_point() -> Vector2:
-	var parts := _plots_of("parts")
-	if parts.is_empty():
-		return Vector2.INF
-	return Vector2(_port_x(parts[0], "steel") - 9.0, RACK["steel"])
 
 
 ## Menu option centres (campus coordinates)
@@ -244,25 +256,24 @@ func option_points() -> Array[Vector2]:
 	return out
 
 
-## What is at `point` (local): an open menu's option first, then the switch, plots, annex, bays
+## What is at `point` (local): an open menu's option first, then the plots, annex, bays
 func target_at(point: Vector2) -> Dictionary:
 	var options := option_points()
 	for k in options.size():
 		if point.distance_to(options[k]) <= _option_radius() * 1.1:
 			return {"kind": "option", "index": k}
-	var sw := switch_point()
-	if sw != Vector2.INF and point.distance_to(sw) <= 7.0:
-		return {"kind": "switch"}
 	for i in factory.slots:
 		if plot_rect(i).has_point(point):
 			return {"kind": "plot", "index": i}
 	if has_annex() and annex_rect().has_point(point):
 		return {"kind": "annex"}
-	for good in INPUT_BAYS:
-		if INPUT_BAYS[good].has_point(point):
+	var bays := input_bays()
+	for good in bays:
+		if bays[good].has_point(point):
 			return {"kind": "bay", "good": good}
-	for good in LineFactory.OUTPUT_GOODS:
-		if output_bay(good).has_point(point):
+	var yards := output_bays()
+	for good in yards:
+		if yards[good].has_point(point):
 			return {"kind": "out", "good": good}
 	return {}
 
@@ -340,8 +351,7 @@ func _with_shadow(layer: CanvasItem, picture: Texture2D, area: Rect2, lift: floa
 	layer.draw_texture_rect(picture, area, false)
 
 
-func _bay_frame(good: String) -> Rect2:
-	var bay: Rect2 = INPUT_BAYS[good]
+func _bay_frame(bay: Rect2) -> Rect2:
 	return Rect2(bay.position.x - WALL, bay.position.y, bay.size.x + WALL * 2.0, bay.size.y + WALL)
 
 
@@ -354,13 +364,22 @@ func _draw_floor() -> void:
 		_floor.draw_texture_rect(_pic("lane_tile"), Rect2(lane.position.x + k * PLOT_STEP, lane.position.y, PLOT_STEP, LANE_H), false)
 	for i in factory.slots:
 		_floor.draw_texture_rect(_pic("plot_empty" if factory.lines[i].is_empty() else "plot_pad"), plot_rect(i), false)
-	for good in INPUT_BAYS:
-		_with_shadow(_floor, _pic("bay"), _bay_frame(good), 1.5)
+	var bays := input_bays()
+	for good in bays:
+		_with_shadow(_floor, _pic("bay"), _bay_frame(bays[good]), 1.5)
 		var level := _level_of(factory.inputs[good])
-		if level > 0:
-			_floor.draw_texture_rect(_pic("pile_%s_%d" % [good, level]), INPUT_BAYS[good], false)
-	for good in LineFactory.OUTPUT_GOODS:
-		_floor.draw_texture_rect(_pic("yard_%s_%d" % [good, _level_of(factory.outputs[good])]), output_bay(good), false)
+		if level == 0:
+			continue
+		if good == "steel":
+			# Steel coils brought in: the middle of the coil yard picture
+			var yard := _pic("yard_steel_%d" % level)
+			var part := Vector2(yard.get_width() * 30.0 / 46.0, yard.get_height())
+			_floor.draw_texture_rect_region(yard, bays[good], Rect2(Vector2((yard.get_width() - part.x) * 0.5, 0.0), part))
+		else:
+			_floor.draw_texture_rect(_pic("pile_%s_%d" % [good, level]), bays[good], false)
+	var yards := output_bays()
+	for good in yards:
+		_floor.draw_texture_rect(_pic("yard_%s_%d" % [good, _level_of(factory.outputs[good])]), yards[good], false)
 	_with_shadow(_floor, _pic("office"), OFFICE, 2.5)
 	# The conveyor rack, one tile per plot; its troughs line up with RACK
 	for k in factory.slots:
@@ -384,11 +403,12 @@ func _draw_belts() -> void:
 		else:
 			_draw_workshop_belts(i, line["rate"])
 		_level_lamps(plot_rect(i), line["level"])
-	_draw_switch()
-	for good in INPUT_BAYS:
-		_draw_rate_pips(INPUT_BAYS[good], good)
-	for good in LineFactory.OUTPUT_GOODS:
-		_draw_rate_pips(output_bay(good), good)
+	var bays := input_bays()
+	for good in bays:
+		_draw_rate_pips(bays[good], good)
+	var yards := output_bays()
+	for good in yards:
+		_draw_rate_pips(yards[good], good)
 	_belts_mesh = _paint.commit(_belts)
 	_paint = null
 
@@ -428,53 +448,36 @@ func _output_flow(good: String) -> float:
 
 func _draw_rack() -> void:
 	# The rack itself is a picture on the floor layer. Inputs: from each bunker's draw-off hopper down, then right to the last plot that takes it
-	for good in ["iron", "coal", "copper"]:
-		var users: Array[int] = _plots_of("parts" if good == "copper" else "steel")
+	var bays := input_bays()
+	for good in bays:
+		var users := _plots_using(good, "inputs")
 		if users.is_empty():
 			continue
-		var bx: float = INPUT_BAYS[good].get_center().x
+		var bx: float = bays[good].get_center().x
 		var flow := _input_flow(good)
 		_belt(Vector2(bx, BAY_TOP + BAY_H + 1.0), Vector2(bx, RACK[good]), good, flow)
 		var far := bx
 		for i in users:
 			far = maxf(far, _port_x(i, good))
 		_belt(Vector2(bx, RACK[good]), Vector2(far, RACK[good]), good, flow)
-	# Outputs: along their lane towards their yard, from both sides, then up into it
-	for good in ["steel", "machine_parts"]:
-		var makers: Array[int] = _plots_of("steel" if good == "steel" else "parts")
+	# Each product: along its lane towards its yard, from both sides, then up into it
+	var yards := output_bays()
+	for good in yards:
+		var makers := _plots_using(good, "outputs")
 		if makers.is_empty():
 			continue
-		var bx := output_bay(good).get_center().x
+		var bx: float = yards[good].get_center().x
 		var lo := bx
 		var hi := bx
 		for i in makers:
 			lo = minf(lo, _port_x(i, good))
 			hi = maxf(hi, _port_x(i, good))
 		var flow := _output_flow(good)
-		if good == "steel":
-			flow *= 1.0 - factory.parts_share * 0.5
 		if lo < bx:
 			_belt(Vector2(lo, RACK[good]), Vector2(bx, RACK[good]), good, flow)
 		if hi > bx:
 			_belt(Vector2(hi, RACK[good]), Vector2(bx, RACK[good]), good, flow)
 		_belt(Vector2(bx, RACK[good]), Vector2(bx, BAY_TOP + BAY_H - 3.0), good, flow)
-
-
-func _draw_switch() -> void:
-	var sw := switch_point()
-	if sw == Vector2.INF:
-		return
-	var d := 4.2
-	var diamond := PackedVector2Array([sw + Vector2(0, -d), sw + Vector2(d, 0), sw + Vector2(0, d), sw + Vector2(-d, 0)])
-	_paint.polygon(_shift(diamond, Vector2(0.8, 1.0)), Color(0, 0, 0, 0.3))
-	_paint.polygon(diamond, Color("#e8c547"))
-	_paint.line(sw + Vector2(-2.0, 0), sw + Vector2(2.0, 0), Color("#5a4a20"), 0.8)
-	_paint.line(sw + Vector2(0.5, -1.5), sw + Vector2(2.0, 0), Color("#5a4a20"), 0.8)
-	_paint.line(sw + Vector2(0.5, 1.5), sw + Vector2(2.0, 0), Color("#5a4a20"), 0.8)
-	# Share ring: steel blue for what is sold, gold for what turns to parts
-	_paint.arc(sw, 6.4, 0.0, TAU, 32, GOODS["steel"].darkened(0.1), 1.6)
-	if factory.parts_share > 0.0:
-		_paint.arc(sw, 6.4, -PI * 0.5, -PI * 0.5 + TAU * factory.parts_share, 32, GOODS["machine_parts"].darkened(0.1), 1.8)
 
 
 func _shift(points: PackedVector2Array, by: Vector2) -> PackedVector2Array:
@@ -563,7 +566,7 @@ func _draw_furnace_belts(i: int, rate: float) -> void:
 	_belt(Vector2(x, y), Vector2(x, RACK["steel"]), "steel", rate)
 
 
-## Steel (from the switch) and copper into the workshop's intakes, parts out of its outlet
+## Steel and copper into the workshop's intakes, parts out of its outlet
 func _draw_workshop_belts(i: int, rate: float) -> void:
 	var y := plot_rect(i).position.y + HALL_PORT_Y
 	for good in ["copper", "steel"]:
@@ -701,11 +704,8 @@ func _draw_hover() -> void:
 	match hover.get("kind", ""):
 		"plot": area = plot_rect(hover["index"])
 		"annex": area = annex_rect()
-		"bay": area = INPUT_BAYS[hover["good"]]
-		"out": area = output_bay(hover["good"])
-		"switch":
-			_paint.arc(switch_point(), 8.4, 0.0, TAU, 32, HIGHLIGHT, 1.4)
-			return
+		"bay": area = input_bays().get(hover["good"], Rect2())
+		"out": area = output_bays().get(hover["good"], Rect2())
 		_: return
 	_paint.rect(area.grow(1.5), HIGHLIGHT, false, 1.4)
 
@@ -715,6 +715,12 @@ func _draw_hover() -> void:
 
 ## Screen pixels per upright unit
 const UI_SCALE := 1.0
+## The for-sale sign shrinks with the campus once a campus unit is less than SIGN_FULL pixels on
+## screen (down to SIGN_LEAST of its size), and is left out below SIGN_HIDE, so it doesn't crowd
+## the map zoomed out
+const SIGN_FULL := 0.6
+const SIGN_LEAST := 0.45
+const SIGN_HIDE := 0.12
 const OPTION_UI_R := 15.0
 const OPTION_UI_GAP := 40.0
 
@@ -726,10 +732,14 @@ func _place_upright() -> void:
 	var size := UI_SCALE / maxf(global_scale.x * zoom, 0.001)
 	_upright.rotation = -global_rotation
 	_upright.scale = Vector2.ONE * size
+	_sign_size = global_scale.x * zoom
 	_upright.queue_redraw()
 
 
 ## A campus point in upright units and back
+var _sign_size := 1.0
+
+
 func _to_up(point: Vector2) -> Vector2:
 	return _upright.transform.affine_inverse() * point
 
@@ -761,15 +771,16 @@ func _draw_upright() -> void:
 	_paint = Painter.new()
 	var font := ThemeDB.fallback_font
 	var texts: Array = []
-	if has_annex():
+	if has_annex() and _sign_size >= SIGN_HIDE:
+		var k := clampf(_sign_size / SIGN_FULL, SIGN_LEAST, 1.0)
 		var c := _to_up(annex_rect().get_center())
-		var board := Rect2(c + Vector2(-34.0, -15.0), Vector2(68.0, 22.0))
-		_paint.rect(Rect2(board.position + Vector2(2.0, 3.0), board.size), Color(0, 0, 0, 0.2))
+		var board := Rect2(c + Vector2(-34.0, -15.0) * k, Vector2(68.0, 22.0) * k)
+		_paint.rect(Rect2(board.position + Vector2(2.0, 3.0) * k, board.size), Color(0, 0, 0, 0.2))
 		_paint.rect(board, CARD)
-		_paint.rect(board, RIM, false, 1.5)
-		_paint.circle(board.position + Vector2(12.0, 11.0), 6.5, Color("#e8b830"))
-		_paint.circle(board.position + Vector2(11.0, 10.0), 4.5, Color("#f6d35a"))
-		texts.append([LineFactory.SLOT_COST, board.position + Vector2(42.0, 16.0), TEXT])
+		_paint.rect(board, RIM, false, 1.5 * k)
+		_paint.circle(board.position + Vector2(12.0, 11.0) * k, 6.5 * k, Color("#e8b830"))
+		_paint.circle(board.position + Vector2(11.0, 10.0) * k, 4.5 * k, Color("#f6d35a"))
+		texts.append([LineFactory.SLOT_COST, board.position + Vector2(42.0, 16.0) * k, TEXT, maxi(6, roundi(11.0 * k))])
 	var points := _upright_options()
 	if not points.is_empty():
 		var r := OPTION_UI_R
@@ -786,11 +797,11 @@ func _draw_upright() -> void:
 			_draw_option_icon(option["id"], c, option["enabled"], r / 9.0)
 			var price: int = option["price"]
 			if price != 0:
-				texts.append([price, c + Vector2(0.0, r + 14.0), (OK.darkened(0.3) if price < 0 else TEXT) if option["enabled"] else BAD])
+				texts.append([price, c + Vector2(0.0, r + 14.0), (OK.darkened(0.3) if price < 0 else TEXT) if option["enabled"] else BAD, 11])
 	_upright_mesh = _paint.commit(_upright)
 	_paint = null
 	for t in texts:
-		_text(font, t[0], t[1], 11, t[2])
+		_text(font, t[0], t[1], t[3], t[2])
 
 
 func _draw_option_icon(id: String, c: Vector2, enabled: bool, k: float) -> void:

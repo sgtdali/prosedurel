@@ -17,7 +17,9 @@ func run() -> void:
 	var f := LineFactory.new(100000)
 	check(f.build(0, "steel"), "steel line not built")
 	check(f.money == 100000 - 11000, "steel line price: %d" % f.money)
-	check(not f.build(0, "parts"), "built over a line")
+	check(not f.build(0, "steel"), "built over a line")
+	check(not f.build(1, "parts"), "parts line in a smelting works")
+	check(f.takes("iron") and not f.takes("steel") and not f.takes("copper"), "smelting works takes the wrong goods")
 	_feed(f, {"iron": 1.0, "coal": 1.0}, 60.0)
 	check(absf(f.outputs["steel"] - 30.0) < 1.0, "steel in 60 s: %.1f" % f.outputs["steel"])
 	check(f.lines[0]["status"] == "working", "status %s" % f.lines[0]["status"])
@@ -28,32 +30,22 @@ func run() -> void:
 
 	# Output full: blocked
 	f.outputs["steel"] = LineFactory.CAPACITY
-	f.parts_steel = LineFactory.PARTS_STEEL_CAPACITY
 	_feed(f, {"iron": 1.0, "coal": 1.0}, 5.0)
 	check(f.lines[0]["status"] == "blocked", "full output: %s" % f.lines[0]["status"])
 
-	# Steel split to a parts line: all steel to parts makes 0.5 parts per second, none sold
-	var g := LineFactory.new(100000)
-	g.build(0, "steel")
-	g.build(1, "parts")
-	g.parts_share = 1.0
-	_feed(g, {"iron": 1.0, "coal": 1.0, "copper": 1.0}, 60.0)
+	# An assembly works: steel brought by truck + copper make 0.5 parts per second
+	var g := LineFactory.new(100000, "assembly")
+	check(not g.build(0, "steel") and g.build(0, "parts"), "assembly works lines")
+	check(g.takes("steel") and g.takes("copper") and not g.takes("iron"), "assembly works takes the wrong goods")
+	check(g.deliver("iron", 10.0) == 0.0, "assembly works took iron")
+	_feed(g, {"steel": 0.5, "copper": 0.5}, 60.0)
 	check(absf(g.outputs["machine_parts"] - 30.0) < 1.5, "parts in 60 s: %.1f" % g.outputs["machine_parts"])
-	check(g.outputs["steel"] < 1.0, "steel sold with share 1: %.1f" % g.outputs["steel"])
-	# No share: parts line waits for steel, everything is sold
-	var h := LineFactory.new(100000)
-	h.build(0, "steel")
-	h.build(1, "parts")
-	_feed(h, {"iron": 1.0, "coal": 1.0, "copper": 1.0}, 30.0)
-	check(h.lines[1]["status"] == "starved" and h.lines[1]["short"] == "steel", "parts line without share: %s" % h.lines[1]["status"])
-	check(absf(h.outputs["steel"] - 15.0) < 1.0, "steel with share 0: %.1f" % h.outputs["steel"])
-	# Half share, parts line can't take it all -> the extra goes to output, nothing lost
-	var k := LineFactory.new(100000)
-	k.build(0, "steel")
-	k.build(1, "parts")
-	k.parts_share = 1.0
-	_feed(k, {"iron": 1.0, "coal": 1.0}, 120.0)
-	check(absf(k.outputs["steel"] + k.parts_steel - 60.0) < 1.5, "steel lost with no copper: out %.1f kept %.1f" % [k.outputs["steel"], k.parts_steel])
+	check(g.output_goods() == ["machine_parts"] and g.input_goods() == ["steel", "copper"], "assembly works goods")
+	# No steel: the parts line waits for it
+	var h := LineFactory.new(100000, "assembly")
+	h.build(0, "parts")
+	_feed(h, {"copper": 1.0}, 30.0)
+	check(h.lines[0]["status"] == "starved" and h.lines[0]["short"] == "steel", "parts line without steel: %s" % h.lines[0]["status"])
 
 	# Two steel lines short of coal share it: both slow down alike
 	var two := LineFactory.new(100000)
@@ -104,7 +96,7 @@ func run() -> void:
 	check(campus.target_at(campus.plot_rect(0).get_center()).get("kind", "") == "plot", "plot not hit")
 	check(campus.target_at(campus.annex_rect().get_center()).get("kind", "") == "annex", "annex not hit")
 	sandbox._open_plot_menu(0)
-	check(campus.menu["options"].size() == 2, "empty plot tray: %s" % str(campus.menu))
+	check(campus.menu["options"].size() == 1, "empty plot tray: %s" % str(campus.menu))
 	var option_point: Vector2 = campus.option_points()[0]
 	check(campus.target_at(option_point).get("kind", "") == "option", "tray option not hit")
 	sandbox._choose(campus.menu, "steel")

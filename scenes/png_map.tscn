@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://dqwbjofb3y85" path="res://ui/money_panel.gd" id="money_panel_script"]
 [ext_resource type="Script" uid="uid://bfw0rf678kvnl" path="res://visuals/mountain_3d_study.gd" id="mountain_3d_script"]
 [ext_resource type="Script" path="res://visuals/forest_3d_study.gd" id="forest_3d_script"]
+[ext_resource type="Script" path="res://map/lone_trees.gd" id="lone_trees_script"]
 [ext_resource type="Script" uid="uid://duf1xgykv52j2" path="res://roads/road_painter.gd" id="road_script"]
 [ext_resource type="Texture2D" uid="uid://rth5rnk83ex1" path="res://baked/terrain_full/tile_0_0.png" id="tex_0"]
 [ext_resource type="Texture2D" uid="uid://le4q42itb4oj" path="res://baked/terrain_full/tile_1_0.png" id="tex_1"]
@@ -310,6 +311,9 @@ position = Vector2(4800, 3200)
 scale = Vector2(0.5, 0.5)
 texture = ExtResource("tex_34")
 centered = false
+
+[node name="LoneTrees" type="Node2D" parent="."]
+script = ExtResource("lone_trees_script")
 
 [node name="Forests" type="Node2D" parent="."]
 

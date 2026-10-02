@@ -41,8 +41,11 @@ const LOAD_TIME := 1.5
 const RETRY := 2.0
 ## Game seconds between two trucks of a route setting off
 const STAGGER := 4.0
-## How close a click must be to a building's centre to pick it
-const PICK_REACH := 48.0
+## How close a click must be to the centre of a building without a site to pick it (also the
+## radius of the ring round a picked one)
+const PICK_REACH := 26.0
+## How far around a building's site a click still picks it
+const PICK_MARGIN := 6.0
 ## Each route's own colour (the next unused one goes to a new route); a route is drawn on the
 ## roads in it, with numbered stop tags (1 = load, 2 = unload)
 const ROUTE_COLORS := [Color("#2f5fd0"), Color("#b0409a"), Color("#1f9a8a"), Color("#e07a1f"),
@@ -742,13 +745,24 @@ func route_at(point: Vector2) -> Route:
 
 func _pick(records: Array[Dictionary], point: Vector2) -> Dictionary:
 	var best := {}
-	var best_distance := PICK_REACH
+	var best_distance := INF
 	for record in records:
 		var distance := point.distance_to(record["center"])
-		if distance < best_distance:
+		if distance < best_distance and _over(record, point):
 			best = record
 			best_distance = distance
 	return best
+
+
+## Whether `point` is on the building's site (a little around it), or within PICK_REACH of its
+## centre when it has none.
+func _over(record: Dictionary, point: Vector2) -> bool:
+	var obstacle: Dictionary = record.get("obstacle", {})
+	if not obstacle.has("half"):
+		return point.distance_to(record["center"]) <= PICK_REACH
+	var local: Vector2 = (point - obstacle["center"]).rotated(-obstacle["angle"])
+	var half: Vector2 = obstacle["half"] + Vector2.ONE * PICK_MARGIN
+	return absf(local.x) <= half.x and absf(local.y) <= half.y
 
 
 # --- Drawing -------------------------------------------------------------------------------

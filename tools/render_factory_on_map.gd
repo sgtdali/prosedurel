@@ -42,8 +42,7 @@ func _capture() -> void:
 	f.build(0, "steel")
 	f.build(1, "steel")
 	f.upgrade(1)
-	f.build(2, "parts")
-	f.parts_share = 0.5
+	f.build(2, "steel")
 	var factories = map.get_node("Factories")
 	for i in 400:
 		f.deliver("iron", 0.6)

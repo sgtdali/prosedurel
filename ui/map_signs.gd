@@ -15,19 +15,21 @@ extends Node2D
 ## chip ringed by how much of this month's demand came (green once met), a house mark for every
 ## 10 houses, a star when full; hollow with no ring while no sales depot stands in its zone. A
 ## town that just grew glows and a green house rises off its badge. Bigger with the detail layer.
-## Balloons are BALLOON world units across but never smaller than MIN_PIXELS on screen.
+## Balloons are BALLOON world units across but never smaller than MIN_PIXELS on screen; both are
+## kept small so that, zoomed out, they don't crowd the (small) buildings.
 
 const MapIcons = preload("res://ui/map_icons.gd")
 const Mining = preload("res://economy/mining.gd")
 const GameClock = preload("res://economy/game_clock.gd")
 
-const BALLOON := 36.0
-const MIN_PIXELS := 28.0
+const BALLOON := 18.0
+const MIN_PIXELS := 16.0
 const MAX_BALLOONS := 3
 const SALES_PATIENCE := 30
 const ORDER := ["no_road", "missing", "full"]
-## How far above a building's centre its balloons stand (above its badge, if it has one)
-const LIFT := {"factory": 80.0, "mine": 76.0, "yard": 64.0, "sales": 70.0}
+## How far above a building's centre its balloons stand (above its badge, if it has one); a
+## factory's grows with its plots, so it is taken from its site
+const LIFT := {"mine": 38.0, "yard": 32.0, "sales": 35.0}
 ## Town badges: world units across (at least BADGE_PIXELS on screen), how long a growth glow lasts
 const BADGE := 34.0
 const BADGE_PIXELS := 24.0
@@ -79,7 +81,11 @@ func problems() -> Array[Dictionary]:
 	var add := func(record: Dictionary, kind: String, good: String) -> void:
 		var key: Vector2 = record["center"]
 		if not by_record.has(key):
-			by_record[key] = {"at": key - Vector2(0.0, LIFT.get(record.get("kind", ""), 60.0)), "signs": []}
+			var lift: float = LIFT.get(record.get("kind", ""), 30.0)
+			if record.has("obstacle") and record.get("kind", "") == "factory":
+				var half: Vector2 = record["obstacle"]["half"]
+				lift = maxf(half.x, half.y) * 0.6
+			by_record[key] = {"at": key - Vector2(0.0, lift), "signs": []}
 		var mark := [kind, good]
 		if not by_record[key]["signs"].has(mark):
 			by_record[key]["signs"].append(mark)
